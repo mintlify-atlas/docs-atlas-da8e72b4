@@ -1,0 +1,346 @@
+---
+title: Notifications API
+description: Push notification management and retrieval
+---
+
+## Overview
+
+The Notifications API provides endpoints for managing and retrieving user notifications. The system supports Firebase Cloud Messaging (FCM) for push notifications to mobile devices and includes notification history management.
+
+<Note>
+  Notifications are automatically generated for important events like match milestones, team invitations, and tournament updates.
+</Note>
+
+## Base URL
+
+```
+/v1/notifications
+```
+
+## Authentication
+
+All notification endpoints require authentication via JWT bearer token.
+
+## Notification Object
+
+<ResponseField name="id" type="string">
+  Unique identifier for the notification
+</ResponseField>
+
+<ResponseField name="userId" type="string">
+  User ID who receives the notification
+</ResponseField>
+
+<ResponseField name="title" type="string">
+  Notification title
+</ResponseField>
+
+<ResponseField name="message" type="string">
+  Notification message body
+</ResponseField>
+
+<ResponseField name="type" type="string">
+  Notification type (e.g., `match`, `team`, `tournament`, `milestone`)
+</ResponseField>
+
+<ResponseField name="read" type="boolean">
+  Whether the notification has been read
+</ResponseField>
+
+<ResponseField name="data" type="object">
+  Additional data payload specific to notification type
+</ResponseField>
+
+<ResponseField name="createdAt" type="string">
+  Timestamp when notification was created (ISO 8601)
+</ResponseField>
+
+## Get Notifications
+
+Retrieve a paginated list of notifications for the authenticated user.
+
+```http
+GET /v1/notifications
+```
+
+### Query Parameters
+
+<ParamField query="sortBy" type="string" default="createdAt:desc">
+  Sort notifications in the format `field:direction`
+</ParamField>
+
+<ParamField query="limit" type="integer" default={10}>
+  Maximum number of results per page (1-100)
+</ParamField>
+
+<ParamField query="page" type="integer" default={1}>
+  Page number to retrieve
+</ParamField>
+
+<ParamField query="read" type="boolean">
+  Filter by read status (true/false)
+</ParamField>
+
+<ParamField query="type" type="string">
+  Filter by notification type
+</ParamField>
+
+### Response
+
+<ResponseField name="results" type="array">
+  Array of notification objects
+</ResponseField>
+
+<ResponseField name="page" type="integer">
+  Current page number
+</ResponseField>
+
+<ResponseField name="limit" type="integer">
+  Results per page
+</ResponseField>
+
+<ResponseField name="totalPages" type="integer">
+  Total number of pages
+</ResponseField>
+
+<ResponseField name="totalResults" type="integer">
+  Total number of notifications
+</ResponseField>
+
+<CodeGroup>
+```bash cURL
+curl -X GET 'https://api.cricpr.com/v1/notifications?page=1&limit=20' \
+  -H "Authorization: Bearer YOUR_ACCESS_TOKEN"
+```
+
+```javascript JavaScript
+const response = await fetch('https://api.cricpr.com/v1/notifications?page=1&limit=20', {
+  headers: {
+    'Authorization': `Bearer ${accessToken}`
+  }
+});
+const { results, page, totalPages } = await response.json();
+```
+
+```python Python
+import requests
+
+response = requests.get(
+  'https://api.cricpr.com/v1/notifications',
+  params={'page': 1, 'limit': 20},
+  headers={'Authorization': f'Bearer {access_token}'}
+)
+data = response.json()
+```
+</CodeGroup>
+
+### Example Response
+
+```json
+{
+  "results": [
+    {
+      "id": "507f1f77bcf86cd799439011",
+      "userId": "507f1f77bcf86cd799439012",
+      "title": "New Match Invitation",
+      "message": "You've been invited to play in the T20 Championship match",
+      "type": "match",
+      "read": false,
+      "data": {
+        "matchId": "507f1f77bcf86cd799439013",
+        "teamId": "507f1f77bcf86cd799439014"
+      },
+      "createdAt": "2025-03-03T10:30:00.000Z"
+    },
+    {
+      "id": "507f1f77bcf86cd799439015",
+      "userId": "507f1f77bcf86cd799439012",
+      "title": "Century Milestone",
+      "message": "Congratulations! You scored your first century",
+      "type": "milestone",
+      "read": true,
+      "data": {
+        "matchId": "507f1f77bcf86cd799439016",
+        "runs": 100
+      },
+      "createdAt": "2025-03-02T15:45:00.000Z"
+    }
+  ],
+  "page": 1,
+  "limit": 20,
+  "totalPages": 1,
+  "totalResults": 2
+}
+```
+
+---
+
+## Mark as Read
+
+Mark a specific notification as read.
+
+```http
+POST /v1/notifications/:notificationId/read
+```
+
+### Path Parameters
+
+<ParamField path="notificationId" type="string" required>
+  Notification ID to mark as read
+</ParamField>
+
+### Response
+
+Returns the updated notification object with `read: true`.
+
+<CodeGroup>
+```bash cURL
+curl -X POST https://api.cricpr.com/v1/notifications/507f1f77bcf86cd799439011/read \
+  -H "Authorization: Bearer YOUR_ACCESS_TOKEN"
+```
+
+```javascript JavaScript
+const response = await fetch(
+  `https://api.cricpr.com/v1/notifications/${notificationId}/read`,
+  {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${accessToken}`
+    }
+  }
+);
+const notification = await response.json();
+```
+
+```python Python
+import requests
+
+response = requests.post(
+  f'https://api.cricpr.com/v1/notifications/{notification_id}/read',
+  headers={'Authorization': f'Bearer {access_token}'}
+)
+notification = response.json()
+```
+</CodeGroup>
+
+---
+
+## Notification Types
+
+The system generates notifications for various events:
+
+<AccordionGroup>
+  <Accordion title="Match Notifications">
+    - Match invitations
+    - Match start reminders
+    - Match completion
+    - Your turn to bat/bowl
+  </Accordion>
+
+  <Accordion title="Team Notifications">
+    - Team invitations
+    - Team captain changes
+    - Team updates
+    - Player additions/removals
+  </Accordion>
+
+  <Accordion title="Tournament Notifications">
+    - Tournament registration confirmations
+    - Match schedule updates
+    - Qualification status
+    - Tournament winners
+  </Accordion>
+
+  <Accordion title="Milestone Notifications">
+    - First century
+    - Five-wicket haul
+    - Hat-trick
+    - Player of the match awards
+  </Accordion>
+
+  <Accordion title="System Notifications">
+    - Account verification
+    - Password changes
+    - Profile updates
+    - Admin announcements
+  </Accordion>
+</AccordionGroup>
+
+## Push Notifications
+
+The system integrates with Firebase Cloud Messaging (FCM) for real-time push notifications to mobile devices.
+
+### FCM Token Registration
+
+Mobile apps should register their FCM token during login to receive push notifications. The token is stored in the user profile and used to send targeted notifications.
+
+<Info>
+  FCM tokens are automatically managed during authentication. See the [Authentication Guide](/authentication) for details on token management.
+</Info>
+
+### Notification Payload
+
+Push notifications include:
+
+- **Title**: Short notification heading
+- **Message**: Notification body text
+- **Data**: Custom payload with event-specific information (matchId, teamId, etc.)
+- **Type**: Notification category for client-side handling
+
+### Best Practices
+
+<CardGroup cols={2}>
+  <Card title="Handle Data Payload" icon="database">
+    Use the `data` field to navigate users to relevant screens (match details, team page, etc.)
+  </Card>
+  <Card title="Mark as Read" icon="check">
+    Mark notifications as read when user views them to maintain accurate unread counts
+  </Card>
+  <Card title="Filter by Type" icon="filter">
+    Allow users to filter notifications by type for better organization
+  </Card>
+  <Card title="Pagination" icon="list">
+    Use pagination to load notifications efficiently, especially for active users
+  </Card>
+</CardGroup>
+
+## Error Responses
+
+<Accordion title="401 Unauthorized">
+  **Missing or Invalid Token**: Authentication required
+  
+  ```json
+  {
+    "code": 401,
+    "message": "Please authenticate"
+  }
+  ```
+</Accordion>
+
+<Accordion title="404 Not Found">
+  **Notification Not Found**: Notification ID does not exist or doesn't belong to user
+  
+  ```json
+  {
+    "code": 404,
+    "message": "Notification not found"
+  }
+  ```
+</Accordion>
+
+## Related Resources
+
+<CardGroup cols={2}>
+  <Card title="Real-Time Updates" icon="bolt" href="/concepts/real-time-updates">
+    WebSocket integration for live notifications
+  </Card>
+  <Card title="Admin Notifications" icon="bell" href="/api/admin/cache-management">
+    Send bulk notifications to users
+  </Card>
+  <Card title="Match Management" icon="trophy" href="/api/matches/overview">
+    Match-related notification triggers
+  </Card>
+  <Card title="Team Management" icon="users" href="/api/teams/overview">
+    Team invitation notifications
+  </Card>
+</CardGroup>

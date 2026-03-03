@@ -115,6 +115,19 @@
             ]
           },
           {
+            "group": "Users",
+            "pages": [
+              "api/users/overview",
+              "api/users/manage"
+            ]
+          },
+          {
+            "group": "Notifications",
+            "pages": [
+              "api/notifications/overview"
+            ]
+          },
+          {
             "group": "Admin",
             "pages": [
               "api/admin/overview",

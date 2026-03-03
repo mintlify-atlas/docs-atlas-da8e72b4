@@ -1,0 +1,153 @@
+---
+title: Users API
+description: User profile management and retrieval endpoints
+---
+
+## Overview
+
+The Users API provides endpoints for managing user profiles and accounts. Users can update their own information, while admins have full access to create, read, update, and delete any user.
+
+<Note>
+  User profiles are tightly integrated with player profiles. When updating batting style, bowling style, or playing role, the associated player profile is automatically updated.
+</Note>
+
+## Base URL
+
+```
+/v1/users
+```
+
+## Authentication
+
+All user endpoints require authentication via JWT bearer token. Most endpoints enforce permission-based access control:
+
+- **Self-service**: Users can view and update their own profile
+- **Admin-only**: Creating users, viewing all users, and deleting users requires admin role
+
+## User Object
+
+<ResponseField name="id" type="string">
+  Unique identifier for the user
+</ResponseField>
+
+<ResponseField name="name" type="string">
+  Full name of the user
+</ResponseField>
+
+<ResponseField name="email" type="string">
+  Email address (unique)
+</ResponseField>
+
+<ResponseField name="phone" type="string">
+  Phone number with country code (optional)
+</ResponseField>
+
+<ResponseField name="gender" type="string">
+  User gender
+</ResponseField>
+
+<ResponseField name="city" type="string">
+  City of residence
+</ResponseField>
+
+<ResponseField name="dob" type="string">
+  Date of birth (ISO 8601 format)
+</ResponseField>
+
+<ResponseField name="profilePicture" type="string">
+  URL to profile picture (Cloudinary hosted)
+</ResponseField>
+
+<ResponseField name="isEmailVerified" type="boolean">
+  Whether email has been verified
+</ResponseField>
+
+<ResponseField name="isPhoneVerified" type="boolean">
+  Whether phone number has been verified
+</ResponseField>
+
+<ResponseField name="provider" type="string">
+  Authentication provider (local, google, apple)
+</ResponseField>
+
+<ResponseField name="roles" type="array">
+  Array of role objects with permissions
+</ResponseField>
+
+## Core Endpoints
+
+<CardGroup cols={2}>
+  <Card title="Get Users" icon="list" href="/api/users/manage#get-users">
+    List all users with filtering and pagination
+  </Card>
+  <Card title="Get User" icon="user" href="/api/users/manage#get-user">
+    Get a specific user by ID
+  </Card>
+  <Card title="Update User" icon="pen-to-square" href="/api/users/manage#update-user">
+    Update user profile information
+  </Card>
+  <Card title="Create User" icon="user-plus" href="/api/users/manage#create-user">
+    Create a new user (admin only)
+  </Card>
+</CardGroup>
+
+## User Status Management
+
+<Accordion title="Deactivate Account">
+  Users can deactivate their own account, which marks it as inactive but preserves all data.
+  
+  **Endpoint**: `POST /v1/users/deactivate`
+  
+  **Authentication**: Required (self-service)
+</Accordion>
+
+<Accordion title="Anonymize Account">
+  Users can request account anonymization, which removes personally identifiable information while preserving statistical data.
+  
+  **Endpoint**: `POST /v1/users/anonymize`
+  
+  **Authentication**: Required (self-service)
+</Accordion>
+
+<Accordion title="Delete Account">
+  Permanently delete a user account. Users can delete their own account, admins can delete any user.
+  
+  **Endpoint**: `DELETE /v1/users/:userId`
+  
+  **Authentication**: Required
+</Accordion>
+
+## Profile Completeness
+
+User profiles track completeness based on filled fields:
+
+- Name
+- Email
+- Phone
+- City
+- Date of birth
+- Profile picture
+- Batting style (via player profile)
+- Bowling style (via player profile)
+- Playing role (via player profile)
+
+<Info>
+  Profile completeness affects user status and may be required for certain features like joining teams or participating in tournaments.
+</Info>
+
+## Related Resources
+
+<CardGroup cols={2}>
+  <Card title="Player Profiles" icon="baseball" href="/api/players/overview">
+    Player-specific cricket information
+  </Card>
+  <Card title="Authentication" icon="shield" href="/api/auth/overview">
+    User authentication and registration
+  </Card>
+  <Card title="Team Management" icon="users" href="/api/teams/overview">
+    Managing teams and memberships
+  </Card>
+  <Card title="Admin API" icon="user-shield" href="/api/admin/overview">
+    Admin-level user management
+  </Card>
+</CardGroup>
