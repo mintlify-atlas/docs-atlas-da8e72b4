@@ -1,0 +1,149 @@
+{
+  "projectType": "api-service",
+  "projectName": "Cric PR Backend",
+  "projectDescription": "A comprehensive cricket match management API with real-time scoring, tournament management, player statistics, and team administration.",
+  "theme": "sequoia",
+  "primaryColor": "#22c55e",
+  "lightColor": "#86efac",
+  "darkColor": "#15803d",
+  "navigation": {
+    "tabs": [
+      {
+        "tab": "Documentation",
+        "groups": [
+          {
+            "group": "Get Started",
+            "pages": [
+              "introduction",
+              "quickstart",
+              "authentication"
+            ]
+          },
+          {
+            "group": "Core Concepts",
+            "pages": [
+              "concepts/matches",
+              "concepts/tournaments",
+              "concepts/teams-and-players",
+              "concepts/real-time-updates"
+            ]
+          },
+          {
+            "group": "Guides",
+            "pages": [
+              "guides/setup",
+              "guides/environment-variables",
+              "guides/database-setup",
+              "guides/redis-caching",
+              "guides/websocket-integration"
+            ]
+          }
+        ]
+      },
+      {
+        "tab": "API Reference",
+        "groups": [
+          {
+            "group": "Authentication",
+            "pages": [
+              "api/auth/overview",
+              "api/auth/register",
+              "api/auth/login",
+              "api/auth/tokens"
+            ]
+          },
+          {
+            "group": "Matches",
+            "pages": [
+              "api/matches/overview",
+              "api/matches/create",
+              "api/matches/manage",
+              "api/matches/scoring"
+            ]
+          },
+          {
+            "group": "Tournaments",
+            "pages": [
+              "api/tournaments/overview",
+              "api/tournaments/create",
+              "api/tournaments/groups",
+              "api/tournaments/points-table"
+            ]
+          },
+          {
+            "group": "Teams",
+            "pages": [
+              "api/teams/overview",
+              "api/teams/manage",
+              "api/teams/invitations"
+            ]
+          },
+          {
+            "group": "Players",
+            "pages": [
+              "api/players/overview",
+              "api/players/manage",
+              "api/players/statistics"
+            ]
+          },
+          {
+            "group": "Innings & Overs",
+            "pages": [
+              "api/innings/overview",
+              "api/overs/overview",
+              "api/balls/overview"
+            ]
+          },
+          {
+            "group": "Statistics",
+            "pages": [
+              "api/stats/overview",
+              "api/stats/player-stats",
+              "api/stats/team-stats"
+            ]
+          },
+          {
+            "group": "Admin",
+            "pages": [
+              "api/admin/overview",
+              "api/admin/user-management",
+              "api/admin/cache-management"
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "keyFeatures": [
+    "Real-time cricket match scoring with WebSocket support",
+    "Tournament management with groups and points tables",
+    "Comprehensive player and team statistics tracking",
+    "Multi-format cricket support (T20, ODI, Test)",
+    "Redis caching for performance optimization",
+    "Role-based access control and JWT authentication",
+    "Firebase integration for notifications",
+    "Stripe payment integration",
+    "Offline sync capabilities",
+    "Cluster mode support with PM2"
+  ],
+  "publicApiSurface": [
+    "POST /v1/auth/register - User registration",
+    "POST /v1/auth/login - User authentication",
+    "POST /v1/matches - Create new match",
+    "GET /v1/matches/:id - Get match details",
+    "POST /v1/tournaments - Create tournament",
+    "GET /v1/tournaments/:id - Get tournament details",
+    "POST /v1/teams - Create team",
+    "GET /v1/teams/:id - Get team details",
+    "POST /v1/players - Create player",
+    "GET /v1/players/:id - Get player details",
+    "POST /v1/innings - Create innings",
+    "POST /v1/overs - Create over",
+    "POST /v1/balls - Record ball",
+    "GET /v1/stats/player/:id - Get player statistics",
+    "GET /v1/stats/team/:id - Get team statistics",
+    "GET /v1/notifications - Get notifications",
+    "POST /v1/admin/users - Admin user management",
+    "DELETE /v1/cache - Clear cache"
+  ]
+}
