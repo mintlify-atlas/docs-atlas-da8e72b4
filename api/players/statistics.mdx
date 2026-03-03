@@ -1,0 +1,461 @@
+---
+title: 'Player Statistics'
+description: 'Get player statistics, performance metrics, and filter by cricket attributes'
+---
+
+## Get Player Stats
+
+<api-endpoint method="GET" path="/v1/players/{playerId}/stats" />
+
+Get comprehensive player statistics including batting, bowling, and fielding performance.
+
+### Path Parameters
+
+<ParamField path="playerId" type="string" required>
+  Player ID
+</ParamField>
+
+### Response
+
+<ResponseField name="player" type="object">
+  Player object with basic information
+</ResponseField>
+
+<ResponseField name="totalMatches" type="integer">
+  Total matches played
+</ResponseField>
+
+<ResponseField name="totalRuns" type="integer">
+  Total runs scored across all matches
+</ResponseField>
+
+<ResponseField name="totalWickets" type="integer">
+  Total wickets taken across all matches
+</ResponseField>
+
+<ResponseField name="totalCatches" type="integer">
+  Total catches taken
+</ResponseField>
+
+<ResponseField name="battingStats" type="array">
+  Array of batting statistics objects
+  
+  <Expandable title="Batting stats object">
+    <ResponseField name="matchId" type="string">
+      Match identifier
+    </ResponseField>
+    <ResponseField name="runs" type="integer">
+      Runs scored in the match
+    </ResponseField>
+    <ResponseField name="ballsFaced" type="integer">
+      Balls faced
+    </ResponseField>
+    <ResponseField name="fours" type="integer">
+      Number of fours hit
+    </ResponseField>
+    <ResponseField name="sixes" type="integer">
+      Number of sixes hit
+    </ResponseField>
+    <ResponseField name="strikeRate" type="number">
+      Strike rate (runs per 100 balls)
+    </ResponseField>
+    <ResponseField name="isOut" type="boolean">
+      Whether the player got out
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+<ResponseField name="bowlingStats" type="array">
+  Array of bowling statistics objects
+  
+  <Expandable title="Bowling stats object">
+    <ResponseField name="matchId" type="string">
+      Match identifier
+    </ResponseField>
+    <ResponseField name="overs" type="number">
+      Overs bowled
+    </ResponseField>
+    <ResponseField name="maidens" type="integer">
+      Maiden overs bowled
+    </ResponseField>
+    <ResponseField name="runs" type="integer">
+      Runs conceded
+    </ResponseField>
+    <ResponseField name="wickets" type="integer">
+      Wickets taken
+    </ResponseField>
+    <ResponseField name="economy" type="number">
+      Economy rate (runs per over)
+    </ResponseField>
+    <ResponseField name="wides" type="integer">
+      Wide balls bowled
+    </ResponseField>
+    <ResponseField name="noBalls" type="integer">
+      No balls bowled
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+<ResponseField name="fieldingStats" type="array">
+  Array of fielding statistics objects
+  
+  <Expandable title="Fielding stats object">
+    <ResponseField name="matchId" type="string">
+      Match identifier
+    </ResponseField>
+    <ResponseField name="catches" type="integer">
+      Catches taken
+    </ResponseField>
+    <ResponseField name="runOuts" type="integer">
+      Run-outs executed
+    </ResponseField>
+    <ResponseField name="stumpings" type="integer">
+      Stumpings (for wicket-keepers)
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+<ResponseField name="playerMatchStats" type="array">
+  Array of per-match statistics objects combining all stats
+</ResponseField>
+
+<RequestExample>
+```bash cURL
+curl https://api.cricpr.com/v1/players/688cb06818c2232abefa254e/stats
+```
+</RequestExample>
+
+<ResponseExample>
+```json Response
+{
+  "player": {
+    "id": "688cb06818c2232abefa254e",
+    "userId": "6887d2f86e607c4c48b33c65",
+    "shortName": "Ahmed K",
+    "battingStyle": "Right-hand bat",
+    "bowlingStyle": "Right-arm fast",
+    "playingRole": "All-rounder"
+  },
+  "totalMatches": 45,
+  "totalRuns": 1250,
+  "totalWickets": 38,
+  "totalCatches": 15,
+  "battingStats": [
+    {
+      "matchId": "match_123",
+      "runs": 45,
+      "ballsFaced": 32,
+      "fours": 5,
+      "sixes": 2,
+      "strikeRate": 140.62,
+      "isOut": true
+    },
+    {
+      "matchId": "match_124",
+      "runs": 78,
+      "ballsFaced": 54,
+      "fours": 8,
+      "sixes": 3,
+      "strikeRate": 144.44,
+      "isOut": false
+    }
+  ],
+  "bowlingStats": [
+    {
+      "matchId": "match_123",
+      "overs": 4.0,
+      "maidens": 0,
+      "runs": 32,
+      "wickets": 2,
+      "economy": 8.0,
+      "wides": 2,
+      "noBalls": 1
+    },
+    {
+      "matchId": "match_124",
+      "overs": 4.0,
+      "maidens": 1,
+      "runs": 24,
+      "wickets": 3,
+      "economy": 6.0,
+      "wides": 0,
+      "noBalls": 0
+    }
+  ],
+  "fieldingStats": [
+    {
+      "matchId": "match_123",
+      "catches": 2,
+      "runOuts": 1,
+      "stumpings": 0
+    }
+  ],
+  "playerMatchStats": [
+    {
+      "matchId": "match_123",
+      "date": "2024-01-10",
+      "opponent": "Lahore Lions",
+      "runs": 45,
+      "wickets": 2,
+      "catches": 2
+    }
+  ]
+}
+```
+</ResponseExample>
+
+---
+
+## Get Players by Role
+
+<api-endpoint method="GET" path="/v1/players/role/{role}" />
+
+Get all players filtered by their primary playing role.
+
+### Path Parameters
+
+<ParamField path="role" type="string" required>
+  Playing role (e.g., "Batsman", "Bowler", "All-rounder", "Wicket-keeper")
+</ParamField>
+
+### Query Parameters
+
+<ParamField query="statusFilter" type="string" default="not_deleted">
+  Status filter: `active`, `not_deleted`, or `all`
+</ParamField>
+
+### Response
+
+Returns array of player objects matching the role.
+
+<RequestExample>
+```bash cURL
+curl https://api.cricpr.com/v1/players/role/All-rounder
+```
+</RequestExample>
+
+<ResponseExample>
+```json Response
+[
+  {
+    "id": "688cb06818c2232abefa254e",
+    "userId": "6887d2f86e607c4c48b33c65",
+    "shortName": "Ahmed K",
+    "battingStyle": "Right-hand bat",
+    "bowlingStyle": "Right-arm fast",
+    "playingRole": "All-rounder",
+    "isVerified": true,
+    "status": "active"
+  },
+  {
+    "id": "688cb1e218c2232abefa2584",
+    "userId": "688cb1e218c2232abefa2582",
+    "shortName": "Ali R",
+    "battingStyle": "Left-hand bat",
+    "bowlingStyle": "Slow left-arm orthodox",
+    "playingRole": "All-rounder",
+    "isVerified": false,
+    "status": "active"
+  }
+]
+```
+</ResponseExample>
+
+---
+
+## Get Players by Batting Style
+
+<api-endpoint method="GET" path="/v1/players/batting-style/{battingStyle}" />
+
+Get all players filtered by batting style.
+
+### Path Parameters
+
+<ParamField path="battingStyle" type="string" required>
+  Batting style: `Right-hand bat`, `Left-hand bat`, or `none`
+</ParamField>
+
+### Query Parameters
+
+<ParamField query="statusFilter" type="string" default="not_deleted">
+  Status filter: `active`, `not_deleted`, or `all`
+</ParamField>
+
+### Response
+
+Returns array of player objects matching the batting style.
+
+<RequestExample>
+```bash cURL
+curl "https://api.cricpr.com/v1/players/batting-style/Right-hand%20bat"
+```
+</RequestExample>
+
+<ResponseExample>
+```json Response
+[
+  {
+    "id": "688cb06818c2232abefa254e",
+    "shortName": "Ahmed K",
+    "battingStyle": "Right-hand bat",
+    "bowlingStyle": "Right-arm fast",
+    "playingRole": "All-rounder",
+    "status": "active"
+  },
+  {
+    "id": "688ca807fd71e61ed611f227",
+    "shortName": "Bilal M",
+    "battingStyle": "Right-hand bat",
+    "bowlingStyle": "Right-arm medium",
+    "playingRole": "Batsman",
+    "status": "active"
+  }
+]
+```
+</ResponseExample>
+
+---
+
+## Get Players by Bowling Style
+
+<api-endpoint method="GET" path="/v1/players/bowling-style/{bowlingStyle}" />
+
+Get all players filtered by bowling style.
+
+### Path Parameters
+
+<ParamField path="bowlingStyle" type="string" required>
+  Bowling style (e.g., `Right-arm fast`, `Slow left-arm orthodox`, `Right-arm leg-break`)
+</ParamField>
+
+### Query Parameters
+
+<ParamField query="statusFilter" type="string" default="not_deleted">
+  Status filter: `active`, `not_deleted`, or `all`
+</ParamField>
+
+### Response
+
+Returns array of player objects matching the bowling style.
+
+<RequestExample>
+```bash cURL
+curl "https://api.cricpr.com/v1/players/bowling-style/Right-arm%20fast"
+```
+</RequestExample>
+
+<ResponseExample>
+```json Response
+[
+  {
+    "id": "688cb06818c2232abefa254e",
+    "shortName": "Ahmed K",
+    "battingStyle": "Right-hand bat",
+    "bowlingStyle": "Right-arm fast",
+    "playingRole": "All-rounder",
+    "status": "active"
+  },
+  {
+    "id": "688cb2ac18c2232abefa25b6",
+    "shortName": "Usman F",
+    "battingStyle": "Right-hand bat",
+    "bowlingStyle": "Right-arm fast",
+    "playingRole": "Bowler",
+    "status": "active"
+  }
+]
+```
+</ResponseExample>
+
+---
+
+## Cricket Statistics Explained
+
+### Batting Metrics
+
+**Runs** - Total runs scored by the batsman
+
+**Balls Faced** - Number of deliveries faced
+
+**Strike Rate** - Runs scored per 100 balls: `(runs / balls_faced) × 100`
+
+**Fours** - Boundaries hit along the ground (4 runs each)
+
+**Sixes** - Boundaries hit over the boundary (6 runs each)
+
+### Bowling Metrics
+
+**Overs** - Number of overs bowled (1 over = 6 legal deliveries)
+
+**Maidens** - Overs with no runs conceded
+
+**Wickets** - Number of batsmen dismissed
+
+**Economy Rate** - Runs conceded per over: `runs / overs`
+
+**Wides** - Deliveries bowled outside the batsman's reach
+
+**No Balls** - Illegal deliveries (front-foot, height, etc.)
+
+### Fielding Metrics
+
+**Catches** - Number of catches taken
+
+**Run Outs** - Direct hits or assisted run-outs
+
+**Stumpings** - Dismissals by wicket-keeper when batsman is out of crease
+
+---
+
+## Common Use Cases
+
+### Find All Fast Bowlers
+
+```bash
+# Right-arm fast bowlers
+curl "https://api.cricpr.com/v1/players/bowling-style/Right-arm%20fast"
+
+# Left-arm fast bowlers
+curl "https://api.cricpr.com/v1/players/bowling-style/Left-arm%20fast"
+```
+
+### Find All-Rounders
+
+```bash
+curl https://api.cricpr.com/v1/players/role/All-rounder
+```
+
+### Get Player Career Statistics
+
+```bash
+curl https://api.cricpr.com/v1/players/PLAYER_ID/stats
+```
+
+### Filter Active Left-Handed Batsmen
+
+```bash
+curl "https://api.cricpr.com/v1/players/batting-style/Left-hand%20bat?statusFilter=active"
+```
+
+---
+
+## Performance Analysis
+
+Use the statistics endpoint to analyze:
+
+- **Best batsmen** - Sort by totalRuns or batting average
+- **Top bowlers** - Sort by totalWickets or economy rate  
+- **Best fielders** - Sort by totalCatches
+- **Match winners** - Identify all-rounders with high runs and wickets
+- **Form analysis** - Recent match statistics trends
+
+### Example: Finding Top Performers
+
+```bash
+# Get player stats for team analysis
+curl https://api.cricpr.com/v1/players/PLAYER_1/stats
+curl https://api.cricpr.com/v1/players/PLAYER_2/stats
+curl https://api.cricpr.com/v1/players/PLAYER_3/stats
+
+# Compare totalRuns, totalWickets, and match performance
+```

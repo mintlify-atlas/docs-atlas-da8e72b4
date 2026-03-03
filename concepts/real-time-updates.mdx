@@ -1,0 +1,403 @@
+---
+title: 'Real-Time Updates'
+description: 'WebSocket integration for live scoring and real-time match updates'
+icon: 'signal-stream'
+---
+
+## Overview
+
+Cric PR uses **Socket.IO** to provide real-time communication for live scoring, match updates, and chat functionality. This enables spectators and players to receive instant updates as matches progress.
+
+## WebSocket Architecture
+
+The API implements WebSocket connections using Socket.IO with CORS enabled:
+
+```javascript
+// Server Configuration
+{
+  cors: {
+    origin: '*',
+    methods: ['GET', 'POST'],
+    credentials: true
+  }
+}
+```
+
+<Info>
+The WebSocket server runs on the same port as the HTTP API server and is initialized during application startup.
+</Info>
+
+## Connection Setup
+
+Clients connect to the WebSocket server using the Socket.IO client library:
+
+```javascript
+import io from 'socket.io-client';
+
+const socket = io('https://api.cricpr.com', {
+  transports: ['websocket', 'polling'],
+  credentials: true
+});
+
+socket.on('connect', () => {
+  console.log('Connected to Cric PR WebSocket');
+});
+```
+
+## Match Scoring Events
+
+While the current socket implementation focuses on chat and user presence, the architecture supports real-time match scoring through custom event emissions.
+
+### Potential Match Events
+
+The following events can be implemented for real-time scoring:
+
+<Accordion title="ballScored">
+  Emitted when a ball is bowled and scored.
+  
+  **Payload:**
+  ```javascript
+  {
+    matchId: String,
+    inningsId: String,
+    overId: String,
+    ball: {
+      ballNumber: Number,
+      runScored: Number,
+      batsmanId: String,
+      bowlerId: String,
+      extras: Number,
+      wicket: Boolean
+    },
+    currentScore: {
+      runs: Number,
+      wickets: Number,
+      overs: String
+    }
+  }
+  ```
+</Accordion>
+
+<Accordion title="overCompleted">
+  Emitted when an over is completed.
+  
+  **Payload:**
+  ```javascript
+  {
+    matchId: String,
+    inningsId: String,
+    overNumber: Number,
+    bowlerId: String,
+    runs: Number,
+    wickets: Number,
+    currentScore: {
+      runs: Number,
+      wickets: Number,
+      overs: String
+    }
+  }
+  ```
+</Accordion>
+
+<Accordion title="inningsCompleted">
+  Emitted when an innings ends.
+  
+  **Payload:**
+  ```javascript
+  {
+    matchId: String,
+    inningsNumber: Number,
+    battingTeamId: String,
+    finalScore: {
+      runs: Number,
+      wickets: Number,
+      overs: String
+    },
+    target: Number  // For second innings
+  }
+  ```
+</Accordion>
+
+<Accordion title="matchStarted">
+  Emitted when a match starts.
+  
+  **Payload:**
+  ```javascript
+  {
+    matchId: String,
+    teamA: String,
+    teamB: String,
+    tossWinner: String,
+    tossDecision: String,  // 'bat' or 'bowl'
+    startTime: Date
+  }
+  ```
+</Accordion>
+
+<Accordion title="matchEnded">
+  Emitted when a match is completed.
+  
+  **Payload:**
+  ```javascript
+  {
+    matchId: String,
+    winnerTeamId: String,
+    result: String,        // e.g., "Team A won by 25 runs"
+    endTime: Date
+  }
+  ```
+</Accordion>
+
+## Room-Based Communication
+
+Socket.IO rooms enable targeted event broadcasting:
+
+### Joining a Match Room
+
+```javascript
+// Client-side
+socket.emit('join', {
+  userId: 'user123',
+  matchId: 'match456'
+});
+```
+
+### Broadcasting to Match Participants
+
+```javascript
+// Server-side (in match service)
+const io = require('./services/socket.service');
+
+// Broadcast ball update to all clients watching this match
+io.to(matchId).emit('ballScored', ballData);
+```
+
+<Tip>
+Use match IDs as room identifiers to ensure updates are only sent to relevant spectators and participants.
+</Tip>
+
+## User Presence
+
+The socket service tracks active users:
+
+### Marking User as Active
+
+```javascript
+socket.emit('active', userId);
+```
+
+### Getting Active Users
+
+```javascript
+socket.emit('activeUsers');
+
+socket.on('activeUsers', (users) => {
+  console.log('Currently active:', users);
+  // users = [{ id, name, email, profilePicture }]
+});
+```
+
+## Chat Integration
+
+The WebSocket implementation includes real-time chat functionality:
+
+### Joining a Chat Room
+
+```javascript
+socket.emit('join', {
+  userId: 'user123',
+  chatId: 'chat456'
+});
+```
+
+### Sending Messages
+
+<Accordion title="Private Message">
+  Send one-on-one messages:
+  
+  ```javascript
+  socket.emit('privateMessage', {
+    chatId: 'chat456',
+    message: 'Hello!',
+    senderId: 'user123',
+    content_type: 'text'
+  });
+  ```
+  
+  **Received by:**
+  ```javascript
+  socket.on('privateMessage', (data) => {
+    console.log('New message:', data);
+    // data = { message, time, sender_id, read, content_type }
+  });
+  ```
+</Accordion>
+
+<Accordion title="Group Message">
+  Send messages to multiple participants:
+  
+  ```javascript
+  socket.emit('groupMessage', {
+    chatId: 'chat456',
+    message: 'Team update!',
+    senderId: 'user123',
+    content_type: 'text'
+  });
+  ```
+  
+  **Received by:**
+  ```javascript
+  socket.on('groupMessage', (data) => {
+    console.log('Group message:', data);
+  });
+  ```
+</Accordion>
+
+### Typing Indicators
+
+```javascript
+// Start typing
+socket.emit('typing', chatId);
+
+// Stop typing
+socket.emit('stopTyping', chatId);
+
+// Listen for typing events
+socket.on('typing', (data) => {
+  console.log(`${data.user} is typing...`);
+});
+
+socket.on('stopTyping', (data) => {
+  console.log(`${data.user} stopped typing`);
+});
+```
+
+## Push Notifications Integration
+
+While not directly part of WebSockets, push notifications complement real-time updates for offline users:
+
+### Match End Notifications
+
+When a match ends, the API automatically:
+
+1. Sends WebSocket events to connected clients
+2. Sends FCM push notifications to all team players
+3. Includes match result and personalized message
+
+**Notification Payload:**
+```javascript
+{
+  title: 'Match Ended',
+  body: 'Hey your match with [Opponent] has ended. [Result]',
+  data: {
+    matchId: String,
+    action: 'MATCH_ENDED',
+    opponentTeam: String,
+    result: String,
+    yourResult: String  // Win/loss from player's perspective
+  }
+}
+```
+
+### Player Milestone Notifications
+
+**Achievements Tracked:**
+- 30+ runs
+- Half-century (50+ runs)
+- Century (100+ runs)
+- 3 wickets
+- Fifer (5+ wickets)
+- Player of the Match
+
+<Note>
+Milestone notifications are sent via FCM but could also be broadcast via WebSocket to connected spectators.
+</Note>
+
+## Error Handling
+
+Handle connection and event errors gracefully:
+
+```javascript
+socket.on('connect_error', (error) => {
+  console.error('Connection error:', error);
+  // Implement reconnection logic
+});
+
+socket.on('disconnect', (reason) => {
+  console.log('Disconnected:', reason);
+  if (reason === 'io server disconnect') {
+    // Server disconnected, attempt to reconnect
+    socket.connect();
+  }
+});
+```
+
+## Best Practices
+
+<Card title="1. Room Management" icon="door-open">
+  Always join appropriate rooms (match ID, chat ID) to receive targeted updates.
+</Card>
+
+<Card title="2. Connection Persistence" icon="link">
+  Implement reconnection logic with exponential backoff for unstable networks.
+</Card>
+
+<Card title="3. Event Throttling" icon="gauge">
+  For high-frequency events (like typing indicators), debounce emissions to reduce load.
+</Card>
+
+<Card title="4. Offline Handling" icon="wifi-slash">
+  Queue events when offline and sync when reconnected. Use HTTP API as fallback.
+</Card>
+
+<Card title="5. Authentication" icon="shield">
+  Validate user identity when joining rooms to prevent unauthorized access to match data.
+</Card>
+
+## Security Considerations
+
+<Warning>
+**Production Recommendations:**
+
+1. **Restrict CORS origins**: Change `origin: '*'` to specific allowed domains
+2. **Implement authentication**: Verify JWT tokens on socket connection
+3. **Rate limiting**: Prevent spam by limiting event emissions per user
+4. **Room authorization**: Verify users have permission to join specific match/chat rooms
+</Warning>
+
+### Socket Authentication Example
+
+```javascript
+// Server-side
+io.use((socket, next) => {
+  const token = socket.handshake.auth.token;
+  try {
+    const decoded = jwt.verify(token, config.jwt.secret);
+    socket.userId = decoded.sub;
+    next();
+  } catch (err) {
+    next(new Error('Authentication error'));
+  }
+});
+```
+
+## Implementation Checklist
+
+When implementing real-time scoring:
+
+- [ ] Emit events from match service when balls are scored
+- [ ] Emit events when overs complete
+- [ ] Emit events when innings end
+- [ ] Broadcast match start/end to all participants
+- [ ] Implement room-based authorization
+- [ ] Add reconnection logic on client
+- [ ] Handle offline scenarios
+- [ ] Test with multiple concurrent matches
+- [ ] Implement rate limiting
+- [ ] Monitor WebSocket connection health
+
+## Related Documentation
+
+- [Match Management](/concepts/matches) - Understanding match lifecycle
+- [WebSocket Integration Guide](/guides/websocket-integration) - Complete setup and integration guide
+- [Match API Reference](/api/matches/overview) - Match management endpoints

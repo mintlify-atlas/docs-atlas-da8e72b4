@@ -1,0 +1,959 @@
+---
+title: 'User Management'
+description: 'Endpoints for managing users, players, teams, and content'
+---
+
+## Dashboard Metrics
+
+### Get Dashboard Numbers
+
+Retrieve key platform metrics for the admin dashboard.
+
+<CodeGroup>
+```bash cURL
+curl -X GET \
+  'https://api.cricpr.com/v1/admin/dashboardNumbers' \
+  -H 'Authorization: Bearer YOUR_ADMIN_TOKEN'
+```
+
+```javascript JavaScript
+const response = await fetch('https://api.cricpr.com/v1/admin/dashboardNumbers', {
+  headers: {
+    'Authorization': 'Bearer YOUR_ADMIN_TOKEN'
+  }
+});
+```
+</CodeGroup>
+
+### Response
+
+<ResponseField name="matches" type="object">
+  Match statistics
+  <Expandable title="Match Metrics">
+    <ResponseField name="total" type="number">
+      Total matches in platform
+    </ResponseField>
+    <ResponseField name="percentChangeSinceLastMonth" type="number">
+      Month-over-month growth percentage
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+<ResponseField name="tournaments" type="object">
+  Tournament statistics
+  <Expandable title="Tournament Metrics">
+    <ResponseField name="total" type="number">
+      Total tournaments
+    </ResponseField>
+    <ResponseField name="active" type="number">
+      Currently active tournaments
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+<ResponseField name="teams" type="object">
+  <ResponseField name="total" type="number">
+    Total teams in platform
+  </ResponseField>
+</ResponseField>
+
+<ResponseField name="players" type="object">
+  Player statistics
+  <Expandable title="Player Metrics">
+    <ResponseField name="total" type="number">
+      Total players (excluding deleted)
+    </ResponseField>
+    <ResponseField name="signupsLast30Days" type="number">
+      New signups in last 30 days
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+---
+
+## Player Management
+
+### Get Players List
+
+Retrieve paginated list of players with filtering and statistics.
+
+<CodeGroup>
+```bash cURL
+curl -X GET \
+  'https://api.cricpr.com/v1/admin/players?page=1&limit=20&city=Mumbai' \
+  -H 'Authorization: Bearer YOUR_ADMIN_TOKEN'
+```
+
+```javascript JavaScript
+const response = await fetch('https://api.cricpr.com/v1/admin/players?page=1&limit=20', {
+  headers: {
+    'Authorization': 'Bearer YOUR_ADMIN_TOKEN'
+  }
+});
+```
+</CodeGroup>
+
+### Query Parameters
+
+<ParamField query="page" type="number" default="1">
+  Page number
+</ParamField>
+
+<ParamField query="limit" type="number" default="20">
+  Results per page
+</ParamField>
+
+<ParamField query="name" type="string" optional>
+  Search by player name (case-insensitive)
+</ParamField>
+
+<ParamField query="city" type="string" optional>
+  Filter by city
+</ParamField>
+
+<ParamField query="battingStyle" type="string" optional>
+  Filter by batting style (e.g., "Right-hand bat")
+</ParamField>
+
+<ParamField query="bowlingStyle" type="string" optional>
+  Filter by bowling style (e.g., "Right-arm fast")
+</ParamField>
+
+<ParamField query="role" type="string" optional>
+  Filter by playing role (e.g., "Opening batter")
+</ParamField>
+
+### Response
+
+<ResponseField name="results" type="array">
+  Array of player objects
+  <Expandable title="Player Object">
+    <ResponseField name="_id" type="string">
+      User ID
+    </ResponseField>
+    <ResponseField name="playerId" type="string">
+      Player profile ID
+    </ResponseField>
+    <ResponseField name="name" type="string">
+      Player name
+    </ResponseField>
+    <ResponseField name="teams" type="array">
+      Array of team names player has played for
+    </ResponseField>
+    <ResponseField name="city" type="string">
+      Player's city
+    </ResponseField>
+    <ResponseField name="playingRole" type="string">
+      Player's role (e.g., "All-rounder")
+    </ResponseField>
+    <ResponseField name="battingStyle" type="string">
+      Batting style
+    </ResponseField>
+    <ResponseField name="bowlingStyle" type="string">
+      Bowling style
+    </ResponseField>
+    <ResponseField name="isWicketKeeper" type="boolean">
+      Whether player is a wicket-keeper
+    </ResponseField>
+    <ResponseField name="matches" type="number">
+      Total matches played
+    </ResponseField>
+    <ResponseField name="runs" type="number">
+      Career runs
+    </ResponseField>
+    <ResponseField name="wickets" type="number">
+      Career wickets
+    </ResponseField>
+    <ResponseField name="strikeRate" type="number">
+      Batting strike rate
+    </ResponseField>
+    <ResponseField name="average" type="number">
+      Batting average
+    </ResponseField>
+    <ResponseField name="economy" type="number">
+      Bowling economy rate
+    </ResponseField>
+    <ResponseField name="fcmToken" type="string">
+      Firebase Cloud Messaging token
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+<ResponseField name="page" type="number">
+  Current page number
+</ResponseField>
+
+<ResponseField name="limit" type="number">
+  Results per page
+</ResponseField>
+
+<ResponseField name="totalResults" type="number">
+  Total matching players
+</ResponseField>
+
+<ResponseField name="totalPages" type="number">
+  Total pages available
+</ResponseField>
+
+---
+
+### Get Player Details
+
+Retrieve comprehensive details for a specific player.
+
+<CodeGroup>
+```bash cURL
+curl -X GET \
+  'https://api.cricpr.com/v1/admin/playerDetails/60f7b3b3b3f3b3b3b3f3b3b3' \
+  -H 'Authorization: Bearer YOUR_ADMIN_TOKEN'
+```
+
+```javascript JavaScript
+const playerId = '60f7b3b3b3f3b3b3b3f3b3b3';
+const response = await fetch(`https://api.cricpr.com/v1/admin/playerDetails/${playerId}`, {
+  headers: {
+    'Authorization': 'Bearer YOUR_ADMIN_TOKEN'
+  }
+});
+```
+</CodeGroup>
+
+### Path Parameters
+
+<ParamField path="playerId" type="string" required>
+  Player profile ID
+</ParamField>
+
+### Response
+
+<ResponseField name="playerId" type="string">
+  Player ID
+</ResponseField>
+
+<ResponseField name="name" type="string">
+  Player name
+</ResponseField>
+
+<ResponseField name="email" type="string">
+  Email address
+</ResponseField>
+
+<ResponseField name="profileImage" type="string">
+  Profile picture URL
+</ResponseField>
+
+<ResponseField name="phone" type="string">
+  Phone number
+</ResponseField>
+
+<ResponseField name="city" type="string">
+  City
+</ResponseField>
+
+<ResponseField name="country" type="string" optional>
+  Country (may be null)
+</ResponseField>
+
+<ResponseField name="playingRole" type="string">
+  Playing role
+</ResponseField>
+
+<ResponseField name="battingStyle" type="string">
+  Batting style
+</ResponseField>
+
+<ResponseField name="bowlingStyle" type="string">
+  Bowling style
+</ResponseField>
+
+<ResponseField name="teams" type="array">
+  Array of team names
+</ResponseField>
+
+<ResponseField name="matches" type="number">
+  Total matches played
+</ResponseField>
+
+<ResponseField name="runs" type="number">
+  Career runs
+</ResponseField>
+
+<ResponseField name="wickets" type="number">
+  Career wickets
+</ResponseField>
+
+<ResponseField name="average" type="number">
+  Batting average
+</ResponseField>
+
+<ResponseField name="economy" type="number">
+  Bowling economy
+</ResponseField>
+
+<ResponseField name="strikeRate" type="number">
+  Strike rate
+</ResponseField>
+
+<ResponseField name="highestScore" type="number">
+  Highest score in an innings
+</ResponseField>
+
+<ResponseField name="bestBowling" type="string">
+  Best bowling figures (e.g., "5/23")
+</ResponseField>
+
+<ResponseField name="matchesArray" type="array">
+  Recent matches (last 10)
+  <Expandable title="Match Object">
+    <ResponseField name="matchTitle" type="string">
+      Match title
+    </ResponseField>
+    <ResponseField name="startDate" type="string">
+      Match date
+    </ResponseField>
+    <ResponseField name="runs" type="number">
+      Runs scored in match
+    </ResponseField>
+    <ResponseField name="wickets" type="number">
+      Wickets taken in match
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+---
+
+## Team Management
+
+### Get Teams List
+
+Retrieve paginated list of teams with statistics.
+
+<CodeGroup>
+```bash cURL
+curl -X GET \
+  'https://api.cricpr.com/v1/admin/teams?page=1&limit=20&sortBy=wins' \
+  -H 'Authorization: Bearer YOUR_ADMIN_TOKEN'
+```
+
+```javascript JavaScript
+const response = await fetch('https://api.cricpr.com/v1/admin/teams?sortBy=wins', {
+  headers: {
+    'Authorization': 'Bearer YOUR_ADMIN_TOKEN'
+  }
+});
+```
+</CodeGroup>
+
+### Query Parameters
+
+<ParamField query="page" type="number" default="1">
+  Page number
+</ParamField>
+
+<ParamField query="limit" type="number" default="20">
+  Results per page
+</ParamField>
+
+<ParamField query="name" type="string" optional>
+  Search by team name
+</ParamField>
+
+<ParamField query="city" type="string" optional>
+  Filter by city
+</ParamField>
+
+<ParamField query="country" type="string" optional>
+  Filter by country
+</ParamField>
+
+<ParamField query="sortBy" type="string" optional>
+  Sort by: "wins", "loss", "totalRuns", "totalWickets"
+</ParamField>
+
+### Response
+
+<ResponseField name="results" type="array">
+  Array of team objects
+  <Expandable title="Team Object">
+    <ResponseField name="teamId" type="string">
+      Team ID
+    </ResponseField>
+    <ResponseField name="teamName" type="string">
+      Team name
+    </ResponseField>
+    <ResponseField name="captainName" type="string">
+      Captain's name
+    </ResponseField>
+    <ResponseField name="captainId" type="string">
+      Captain's player ID
+    </ResponseField>
+    <ResponseField name="country" type="string">
+      Country
+    </ResponseField>
+    <ResponseField name="city" type="string">
+      City
+    </ResponseField>
+    <ResponseField name="matches" type="number">
+      Total matches played
+    </ResponseField>
+    <ResponseField name="wins" type="number">
+      Matches won
+    </ResponseField>
+    <ResponseField name="losses" type="number">
+      Matches lost
+    </ResponseField>
+    <ResponseField name="totalRuns" type="number">
+      Total runs scored
+    </ResponseField>
+    <ResponseField name="totalWickets" type="number">
+      Total wickets taken
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+Includes pagination fields: `page`, `limit`, `totalResults`, `totalPages`.
+
+---
+
+### Get Team Details
+
+Retrieve comprehensive team information with player roster and match history.
+
+<CodeGroup>
+```bash cURL
+curl -X GET \
+  'https://api.cricpr.com/v1/admin/teamDetails/60f7b3b3b3f3b3b3b3f3b3b3' \
+  -H 'Authorization: Bearer YOUR_ADMIN_TOKEN'
+```
+
+```javascript JavaScript
+const teamId = '60f7b3b3b3f3b3b3b3f3b3b3';
+const response = await fetch(`https://api.cricpr.com/v1/admin/teamDetails/${teamId}`, {
+  headers: {
+    'Authorization': 'Bearer YOUR_ADMIN_TOKEN'
+  }
+});
+```
+</CodeGroup>
+
+### Path Parameters
+
+<ParamField path="teamId" type="string" required>
+  Team ID
+</ParamField>
+
+### Response
+
+<ResponseField name="teamId" type="string">
+  Team ID
+</ResponseField>
+
+<ResponseField name="teamName" type="string">
+  Team name
+</ResponseField>
+
+<ResponseField name="teamLogo" type="string">
+  Team logo URL
+</ResponseField>
+
+<ResponseField name="teamCaptain" type="string">
+  Captain name
+</ResponseField>
+
+<ResponseField name="teamCaptainId" type="string">
+  Captain player ID
+</ResponseField>
+
+<ResponseField name="teamCountry" type="string">
+  Country
+</ResponseField>
+
+<ResponseField name="teamCity" type="string">
+  City
+</ResponseField>
+
+<ResponseField name="matchesPlayed" type="number">
+  Total matches
+</ResponseField>
+
+<ResponseField name="wins" type="number">
+  Matches won
+</ResponseField>
+
+<ResponseField name="losses" type="number">
+  Matches lost
+</ResponseField>
+
+<ResponseField name="winRate" type="number">
+  Win percentage
+</ResponseField>
+
+<ResponseField name="totalRuns" type="number">
+  Total runs scored by team
+</ResponseField>
+
+<ResponseField name="totalPlayers" type="number">
+  Number of players in roster
+</ResponseField>
+
+<ResponseField name="totalWickets" type="number">
+  Total wickets taken
+</ResponseField>
+
+<ResponseField name="highestScore" type="number">
+  Highest team total
+</ResponseField>
+
+<ResponseField name="players" type="array">
+  Array of player objects with stats
+  <Expandable title="Player Object">
+    <ResponseField name="playerId" type="string">
+      Player ID
+    </ResponseField>
+    <ResponseField name="playerName" type="string">
+      Player name
+    </ResponseField>
+    <ResponseField name="playerProfilePic" type="string">
+      Profile picture URL
+    </ResponseField>
+    <ResponseField name="playerRole" type="string">
+      Playing role
+    </ResponseField>
+    <ResponseField name="battingStyle" type="string">
+      Batting style
+    </ResponseField>
+    <ResponseField name="bowlingStyle" type="string">
+      Bowling style
+    </ResponseField>
+    <ResponseField name="matches" type="number">
+      Matches for this team
+    </ResponseField>
+    <ResponseField name="runs" type="number">
+      Runs for this team
+    </ResponseField>
+    <ResponseField name="wickets" type="number">
+      Wickets for this team
+    </ResponseField>
+    <ResponseField name="highestScore" type="number">
+      Highest score
+    </ResponseField>
+    <ResponseField name="bestBowling" type="string">
+      Best bowling figures
+    </ResponseField>
+    <ResponseField name="economy" type="number">
+      Bowling economy
+    </ResponseField>
+    <ResponseField name="average" type="number">
+      Batting average
+    </ResponseField>
+    <ResponseField name="strikeRate" type="number">
+      Strike rate
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+<ResponseField name="matches" type="array">
+  Recent matches (last 5)
+  <Expandable title="Match Object">
+    <ResponseField name="title" type="string">
+      Match title
+    </ResponseField>
+    <ResponseField name="date" type="string">
+      Match date
+    </ResponseField>
+    <ResponseField name="status" type="string">
+      Match status: "live", "scheduled", "completed"
+    </ResponseField>
+    <ResponseField name="result" type="string" optional>
+      Match result (for completed matches)
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+---
+
+### Delete Team
+
+Delete a team and all associated data.
+
+<CodeGroup>
+```bash cURL
+curl -X DELETE \
+  'https://api.cricpr.com/v1/admin/teams/60f7b3b3b3f3b3b3b3f3b3b3' \
+  -H 'Authorization: Bearer YOUR_ADMIN_TOKEN'
+```
+
+```javascript JavaScript
+const teamId = '60f7b3b3b3f3b3b3b3f3b3b3';
+const response = await fetch(`https://api.cricpr.com/v1/admin/teams/${teamId}`, {
+  method: 'DELETE',
+  headers: {
+    'Authorization': 'Bearer YOUR_ADMIN_TOKEN'
+  }
+});
+```
+</CodeGroup>
+
+### Path Parameters
+
+<ParamField path="teamId" type="string" required>
+  Team ID to delete
+</ParamField>
+
+### Response
+
+Returns HTTP 204 No Content on success.
+
+<Warning>
+  Deleting a team will remove all team instances, match associations, and may affect tournament data. This operation cannot be undone.
+</Warning>
+
+---
+
+## Match Management
+
+### Get Team Matches
+
+Retrieve matches with filtering and pagination.
+
+<CodeGroup>
+```bash cURL
+curl -X GET \
+  'https://api.cricpr.com/v1/admin/teamMatches?status=completed&city=Mumbai' \
+  -H 'Authorization: Bearer YOUR_ADMIN_TOKEN'
+```
+</CodeGroup>
+
+### Query Parameters
+
+<ParamField query="page" type="number" default="1">
+  Page number
+</ParamField>
+
+<ParamField query="limit" type="number" default="20">
+  Results per page
+</ParamField>
+
+<ParamField query="team_name" type="string" optional>
+  Filter by team name
+</ParamField>
+
+<ParamField query="city" type="string" optional>
+  Filter by city
+</ParamField>
+
+<ParamField query="ground" type="string" optional>
+  Filter by ground name
+</ParamField>
+
+<ParamField query="status" type="string" optional>
+  Filter by status: "live", "completed", "scheduled"
+</ParamField>
+
+### Response
+
+Returns paginated match list with team names, status, and results.
+
+---
+
+### Get Match Details
+
+Retrieve comprehensive match information including scorecard.
+
+<CodeGroup>
+```bash cURL
+curl -X GET \
+  'https://api.cricpr.com/v1/admin/matchDetails/60f7b3b3b3f3b3b3b3f3b3b3' \
+  -H 'Authorization: Bearer YOUR_ADMIN_TOKEN'
+```
+</CodeGroup>
+
+### Path Parameters
+
+<ParamField path="matchId" type="string" required>
+  Match ID
+</ParamField>
+
+### Response
+
+Includes match details, team logos, status, result, tournament info, and full scorecard for non-scheduled matches.
+
+---
+
+### Delete Match
+
+Delete a match and all associated data.
+
+<CodeGroup>
+```bash cURL
+curl -X DELETE \
+  'https://api.cricpr.com/v1/admin/matches/60f7b3b3b3f3b3b3b3f3b3b3' \
+  -H 'Authorization: Bearer YOUR_ADMIN_TOKEN'
+```
+</CodeGroup>
+
+### Path Parameters
+
+<ParamField path="matchId" type="string" required>
+  Match ID to delete
+</ParamField>
+
+### Response
+
+Returns HTTP 204 No Content on success.
+
+<Warning>
+  Deleting a match will remove all innings, balls, stats, and cannot be undone.
+</Warning>
+
+---
+
+## Tournament Management
+
+### Get Tournaments List
+
+Retrieve all tournaments with filtering and sorting.
+
+<CodeGroup>
+```bash cURL
+curl -X GET \
+  'https://api.cricpr.com/v1/admin/tournaments?sortBy=startDate' \
+  -H 'Authorization: Bearer YOUR_ADMIN_TOKEN'
+```
+</CodeGroup>
+
+### Query Parameters
+
+<ParamField query="page" type="number" default="1">
+  Page number
+</ParamField>
+
+<ParamField query="limit" type="number" default="20">
+  Results per page
+</ParamField>
+
+<ParamField query="name" type="string" optional>
+  Search by tournament name
+</ParamField>
+
+<ParamField query="sortBy" type="string" optional>
+  Sort by: "startDate", "endDate", "totalMatches", "totalTeams"
+</ParamField>
+
+### Response
+
+Returns paginated tournament list with match/team counts and status.
+
+---
+
+### Get Tournament Details
+
+Retrieve comprehensive tournament information.
+
+<CodeGroup>
+```bash cURL
+curl -X GET \
+  'https://api.cricpr.com/v1/admin/tournaments/60f7b3b3b3f3b3b3b3f3b3b3' \
+  -H 'Authorization: Bearer YOUR_ADMIN_TOKEN'
+```
+</CodeGroup>
+
+### Path Parameters
+
+<ParamField path="tournamentId" type="string" required>
+  Tournament ID
+</ParamField>
+
+### Response
+
+Includes tournament info, matches played, fixtures, and points table.
+
+---
+
+### Delete Tournament
+
+Delete a tournament.
+
+<CodeGroup>
+```bash cURL
+curl -X DELETE \
+  'https://api.cricpr.com/v1/admin/tournaments/60f7b3b3b3f3b3b3b3f3b3b3' \
+  -H 'Authorization: Bearer YOUR_ADMIN_TOKEN'
+```
+</CodeGroup>
+
+### Path Parameters
+
+<ParamField path="tournamentId" type="string" required>
+  Tournament ID to delete
+</ParamField>
+
+### Response
+
+Returns HTTP 204 No Content on success.
+
+---
+
+## Analytics
+
+### Get Top Talent
+
+Get leaderboards for top performers.
+
+<CodeGroup>
+```bash cURL
+curl -X GET \
+  'https://api.cricpr.com/v1/admin/topTalent?role=Batsmen&city=Mumbai' \
+  -H 'Authorization: Bearer YOUR_ADMIN_TOKEN'
+```
+</CodeGroup>
+
+### Query Parameters
+
+<ParamField query="role" type="string" optional>
+  Filter by role: "Batsmen", "Bowler", "AllRounder", "Wicketkeeper", "none"
+</ParamField>
+
+<ParamField query="city" type="string" optional>
+  Filter by city
+</ParamField>
+
+<ParamField query="page" type="number" default="1">
+  Page number
+</ParamField>
+
+<ParamField query="limit" type="number" default="20">
+  Results per page
+</ParamField>
+
+### Response
+
+Returns ranked players with stats, sorted by performance based on role.
+
+---
+
+### Get Recent Matches
+
+Get recent matches with statistics over time.
+
+<CodeGroup>
+```bash cURL
+curl -X GET \
+  'https://api.cricpr.com/v1/admin/recentMatches?matches=10' \
+  -H 'Authorization: Bearer YOUR_ADMIN_TOKEN'
+```
+</CodeGroup>
+
+### Query Parameters
+
+<ParamField query="matches" type="number" default="5">
+  Number of recent matches to retrieve
+</ParamField>
+
+<ParamField query="page" type="number" default="1">
+  Page number
+</ParamField>
+
+### Response
+
+Returns recent matches and match count over time (last 6 months).
+
+---
+
+### Get Recent Signups
+
+Get recently joined players.
+
+<CodeGroup>
+```bash cURL
+curl -X GET \
+  'https://api.cricpr.com/v1/admin/recentSignups?number=50' \
+  -H 'Authorization: Bearer YOUR_ADMIN_TOKEN'
+```
+</CodeGroup>
+
+### Query Parameters
+
+<ParamField query="number" type="number" default="30">
+  Number of signups (max: 200)
+</ParamField>
+
+### Response
+
+Returns list of recent player signups with profile info.
+
+---
+
+### Get Top Runs and Wickets
+
+Get top run scorers and wicket takers.
+
+<CodeGroup>
+```bash cURL
+curl -X GET \
+  'https://api.cricpr.com/v1/admin/topRunsAndWickets?runScorers=10&wicketTakers=10' \
+  -H 'Authorization: Bearer YOUR_ADMIN_TOKEN'
+```
+</CodeGroup>
+
+### Query Parameters
+
+<ParamField query="runScorers" type="number" default="5">
+  Number of top run scorers (max: 50)
+</ParamField>
+
+<ParamField query="wicketTakers" type="number" default="5">
+  Number of top wicket takers (max: 50)
+</ParamField>
+
+### Response
+
+Returns separate lists for top run scorers and wicket takers.
+
+---
+
+### Get Platform Stats
+
+Get comprehensive platform statistics.
+
+<CodeGroup>
+```bash cURL
+curl -X GET \
+  'https://api.cricpr.com/v1/admin/stats' \
+  -H 'Authorization: Bearer YOUR_ADMIN_TOKEN'
+```
+</CodeGroup>
+
+### Response
+
+<ResponseField name="totalSixes" type="number">
+  Total sixes hit on platform
+</ResponseField>
+
+<ResponseField name="totalFours" type="number">
+  Total fours hit
+</ResponseField>
+
+<ResponseField name="totalExtras" type="number">
+  Total extras conceded
+</ResponseField>
+
+<ResponseField name="highestTeamTotal" type="string">
+  Highest team score (format: "250/5")
+</ResponseField>
+
+<ResponseField name="topRunScorers" type="array">
+  Top 5 run scorers with name, runs, matches, average
+</ResponseField>
+
+<ResponseField name="topWicketTakers" type="array">
+  Top 5 wicket takers with name, wickets, matches, average
+</ResponseField>
+
+<ResponseField name="bestBattingAverages" type="array">
+  Top 5 batting averages with name, runs, matches, average
+</ResponseField>
+
+<ResponseField name="bestBowlingAverages" type="array">
+  Top 5 bowling averages with name, wickets, matches, average
+</ResponseField>

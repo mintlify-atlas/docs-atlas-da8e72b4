@@ -1,0 +1,288 @@
+---
+title: 'Admin API Overview'
+description: 'Administrative endpoints for managing users, content, and system operations'
+---
+
+## Overview
+
+The Admin API provides comprehensive endpoints for administrative operations in Cric PR. These endpoints are restricted to users with admin roles and provide access to user management, content moderation, analytics, and system operations.
+
+## Base URL
+
+```
+/v1/admin
+```
+
+## Authentication & Authorization
+
+All admin endpoints require two levels of authentication:
+
+### 1. JWT Authentication
+
+Requires a valid JWT token in the Authorization header:
+
+```bash
+Authorization: Bearer YOUR_JWT_TOKEN
+```
+
+### 2. Admin Role Check
+
+From `admin.js:src/middlewares/admin.js:4-20`:
+
+```javascript
+const isAdmin = (req, res, next) => {
+  const user = req.user;
+  
+  if (!user) {
+    return next(new ApiError(httpStatus.UNAUTHORIZED, 'Please authenticate'));
+  }
+  
+  const hasAdminRole = user.roles && 
+    user.roles.some((role) => role.name === 'admin');
+  
+  if (!hasAdminRole) {
+    return next(new ApiError(httpStatus.FORBIDDEN, 'Admin access only'));
+  }
+  
+  return next();
+};
+```
+
+Users must have a role with `name: "admin"` in their roles array.
+
+## Admin Permissions
+
+Admin users have access to:
+
+### Content Management
+- View and manage all players
+- View and manage all teams
+- View and manage all matches
+- View and manage all tournaments
+- Delete players, teams, matches, and tournaments
+
+### User Management
+- View all user profiles
+- Filter and search users
+- View user statistics and activity
+- Manage user roles (future)
+
+### Analytics & Reporting
+- Dashboard metrics
+- Top performers (batting/bowling)
+- Match statistics
+- User signups and growth
+- Platform-wide statistics
+
+### System Operations
+- Send platform-wide notifications
+- View notification history
+- Health checks
+- Cache management (implicit through updates)
+
+## Admin Dashboard Data
+
+The admin API provides comprehensive dashboard data:
+
+### Dashboard Numbers
+
+```bash
+GET /v1/admin/dashboardNumbers
+```
+
+Returns key metrics:
+- Total matches and monthly change
+- Active tournaments
+- Total teams and players
+- Recent signups
+
+### Top Talent
+
+```bash
+GET /v1/admin/topTalent
+```
+
+Leaderboards for:
+- Top run scorers
+- Top wicket takers
+- Best averages
+- Filtered by role and city
+
+### Recent Activity
+
+```bash
+GET /v1/admin/recentMatches
+GET /v1/admin/recentSignups
+```
+
+Recent matches with results and new user signups.
+
+## API Endpoint Categories
+
+<CardGroup cols={2}>
+  <Card title="User Management" icon="users" href="/api/admin/user-management">
+    Manage users, players, teams, and view detailed profiles
+  </Card>
+  <Card title="Cache Management" icon="database" href="/api/admin/cache-management">
+    System operations, notifications, and data management
+  </Card>
+</CardGroup>
+
+## Admin Profile Management
+
+Admins can manage their own profile:
+
+- Update display name
+- Change profile photo
+- Verify password
+- Change password
+- Logout (revoke refresh token)
+
+See [Cache Management](/api/admin/cache-management) for profile endpoints.
+
+## Error Handling
+
+Admin endpoints return standard error responses:
+
+### Authorization Errors
+
+**401 Unauthorized**
+```json
+{
+  "statusCode": 401,
+  "message": "Please authenticate"
+}
+```
+
+**403 Forbidden**
+```json
+{
+  "statusCode": 403,
+  "message": "Admin access only"
+}
+```
+
+### Resource Errors
+
+**404 Not Found**
+```json
+{
+  "statusCode": 404,
+  "message": "Player not found"
+}
+```
+
+### Validation Errors
+
+**400 Bad Request**
+```json
+{
+  "statusCode": 400,
+  "message": "Validation error",
+  "errors": [
+    {
+      "field": "name",
+      "message": "Name is required"
+    }
+  ]
+}
+```
+
+## Rate Limiting
+
+Admin endpoints may have different rate limits than public endpoints. Contact support for specific limits.
+
+## Pagination
+
+Most list endpoints support pagination:
+
+<ParamField query="page" type="number" default="1">
+  Page number (1-indexed)
+</ParamField>
+
+<ParamField query="limit" type="number" default="20">
+  Results per page (max: 200)
+</ParamField>
+
+Response includes:
+
+```json
+{
+  "results": [...],
+  "page": 1,
+  "limit": 20,
+  "totalResults": 150,
+  "totalPages": 8
+}
+```
+
+## Filtering & Sorting
+
+List endpoints support various filters:
+
+### Common Filters
+- `name`: Search by name (case-insensitive)
+- `city`: Filter by city
+- `status`: Filter by status
+- `sortBy`: Sort field and order (e.g., "createdAt:desc")
+
+### Example
+
+```bash
+GET /v1/admin/players?city=Mumbai&role=Batsmen&page=1&limit=20
+```
+
+## Best Practices
+
+### Security
+
+1. **Protect Admin Tokens**: Never expose admin JWT tokens
+2. **Use HTTPS**: Always use HTTPS for admin endpoints
+3. **Audit Logs**: Track admin actions (implementation varies)
+4. **Rotate Tokens**: Regularly refresh authentication tokens
+
+### Performance
+
+1. **Use Pagination**: Always paginate large result sets
+2. **Filter Early**: Apply filters to reduce data transfer
+3. **Cache Results**: Cache frequently accessed data client-side
+4. **Batch Operations**: Use batch endpoints when available
+
+### Data Management
+
+1. **Verify Before Delete**: Confirm destructive operations
+2. **Backup Data**: Export data before mass deletions
+3. **Check Dependencies**: Verify no dependencies before deletion
+4. **Use Soft Deletes**: Platform uses soft deletes (status: 'deleted')
+
+## System Health
+
+### Health Check
+
+```bash
+GET /v1/admin/health
+```
+
+Returns:
+```json
+{
+  "status": "ok",
+  "message": "Admin endpoint healthy"
+}
+```
+
+Use for monitoring admin API availability.
+
+## Getting Started
+
+1. **Obtain Admin Role**: Contact platform administrators
+2. **Get JWT Token**: Authenticate with admin credentials
+3. **Test Health Endpoint**: Verify admin access
+4. **Explore Dashboard**: Start with dashboard endpoints
+5. **Read Documentation**: Review specific endpoint docs
+
+## Related Resources
+
+- [Authentication API](/api/auth/overview) - User authentication
+- [Statistics API](/api/stats/overview) - Statistics calculations
+- [Match API](/api/match/overview) - Match management

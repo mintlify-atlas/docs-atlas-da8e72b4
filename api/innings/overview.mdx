@@ -1,0 +1,498 @@
+---
+title: 'Innings Management'
+description: 'Manage cricket match innings including creation, scoring, and lifecycle operations'
+icon: 'cricket-bat-ball'
+---
+
+## Overview
+
+Innings represent individual batting periods within a cricket match. Each match can have 1-4 innings depending on the format. The Innings API provides comprehensive management of the batting team's performance, including real-time scoring, player management, and statistics.
+
+### Relationship Hierarchy
+
+```
+Match
+  └── Innings (1-4 per match)
+      └── Overs
+          └── Balls
+```
+
+## Core Endpoints
+
+### Create Innings
+
+<Note>
+  Innings are automatically numbered sequentially within each match. The first innings created will be `inningsNumber: 1`, the second will be `inningsNumber: 2`, etc.
+</Note>
+
+```bash
+POST /api/v1/innings
+```
+
+<ParamField body="matchId" type="string" required>
+  MongoDB ObjectId of the match this innings belongs to.
+</ParamField>
+
+<ParamField body="battingTeamInstanceId" type="string" required>
+  MongoDB ObjectId of the team instance that is batting.
+</ParamField>
+
+<ParamField body="bowlingTeamInstanceId" type="string" required>
+  MongoDB ObjectId of the team instance that is bowling.
+</ParamField>
+
+<ParamField body="inningNumber" type="number" default="auto-incremented">
+  Innings number (1-4). Automatically assigned based on existing innings for the match.
+</ParamField>
+
+<ParamField body="status" type="string" default="inProgress">
+  Current status of the innings.
+  
+  Options: `inProgress`, `completed`
+</ParamField>
+
+<ParamField body="dayNumber" type="number">
+  Day number for test matches (1-5). Only applicable for multi-day formats.
+</ParamField>
+
+<ParamField body="meta" type="object" default="{}">
+  Additional metadata for the innings.
+</ParamField>
+
+<CodeGroup>
+
+```bash cURL
+curl -X POST https://api.example.com/api/v1/innings \
+  -H "Authorization: Bearer YOUR_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "matchId": "507f1f77bcf86cd799439011",
+    "battingTeamInstanceId": "507f1f77bcf86cd799439012",
+    "bowlingTeamInstanceId": "507f1f77bcf86cd799439013",
+    "status": "inProgress"
+  }'
+```
+
+```javascript JavaScript
+const response = await fetch('https://api.example.com/api/v1/innings', {
+  method: 'POST',
+  headers: {
+    'Authorization': 'Bearer YOUR_TOKEN',
+    'Content-Type': 'application/json'
+  },
+  body: JSON.stringify({
+    matchId: '507f1f77bcf86cd799439011',
+    battingTeamInstanceId: '507f1f77bcf86cd799439012',
+    bowlingTeamInstanceId: '507f1f77bcf86cd799439013',
+    status: 'inProgress'
+  })
+});
+
+const innings = await response.json();
+```
+
+```python Python
+import requests
+
+response = requests.post(
+    'https://api.example.com/api/v1/innings',
+    headers={
+        'Authorization': 'Bearer YOUR_TOKEN',
+        'Content-Type': 'application/json'
+    },
+    json={
+        'matchId': '507f1f77bcf86cd799439011',
+        'battingTeamInstanceId': '507f1f77bcf86cd799439012',
+        'bowlingTeamInstanceId': '507f1f77bcf86cd799439013',
+        'status': 'inProgress'
+    }
+)
+
+innings = response.json()
+```
+
+</CodeGroup>
+
+### Get Innings by ID
+
+Retrieve detailed information about a specific innings.
+
+```bash
+GET /api/v1/innings/{inningsId}
+```
+
+### Get Innings by Match
+
+Retrieve all innings for a specific match.
+
+```bash
+GET /api/v1/innings/match/{matchId}
+```
+
+### Query Innings
+
+Search and filter innings with pagination support.
+
+```bash
+GET /api/v1/innings?matchId={matchId}&status={status}
+```
+
+<ParamField query="matchId" type="string">
+  Filter by match ID.
+</ParamField>
+
+<ParamField query="battingTeamInstanceId" type="string">
+  Filter by batting team.
+</ParamField>
+
+<ParamField query="bowlingTeamInstanceId" type="string">
+  Filter by bowling team.
+</ParamField>
+
+<ParamField query="inningNumber" type="number">
+  Filter by innings number (1-4).
+</ParamField>
+
+<ParamField query="status" type="string">
+  Filter by status (`inProgress`, `completed`).
+</ParamField>
+
+<ParamField query="page" type="number" default="1">
+  Page number for pagination.
+</ParamField>
+
+<ParamField query="limit" type="number" default="10">
+  Number of results per page.
+</ParamField>
+
+<ParamField query="sortBy" type="string">
+  Sort field in format: `field:(asc|desc)`. Example: `inningNumber:asc`
+</ParamField>
+
+### Update Innings
+
+Update innings details.
+
+```bash
+PATCH /api/v1/innings/{inningsId}
+```
+
+<ParamField body="status" type="string">
+  Update innings status.
+</ParamField>
+
+<ParamField body="dayNumber" type="number">
+  Update day number for test matches.
+</ParamField>
+
+<ParamField body="meta" type="object">
+  Update metadata.
+</ParamField>
+
+### Delete Innings
+
+Delete an innings and all associated data (overs, balls).
+
+```bash
+DELETE /api/v1/innings/{inningsId}
+```
+
+<Warning>
+  Deleting an innings will permanently remove all associated overs and balls. This action cannot be undone.
+</Warning>
+
+## Innings Lifecycle Operations
+
+### Start Innings
+
+Mark an innings as started and initialize scoring.
+
+```bash
+POST /api/v1/innings/{inningsId}/start
+```
+
+<CodeGroup>
+
+```bash cURL
+curl -X POST https://api.example.com/api/v1/innings/507f1f77bcf86cd799439011/start \
+  -H "Authorization: Bearer YOUR_TOKEN"
+```
+
+```javascript JavaScript
+const response = await fetch(
+  'https://api.example.com/api/v1/innings/507f1f77bcf86cd799439011/start',
+  {
+    method: 'POST',
+    headers: {
+      'Authorization': 'Bearer YOUR_TOKEN'
+    }
+  }
+);
+
+const innings = await response.json();
+```
+
+</CodeGroup>
+
+### End Innings
+
+Complete an innings with final statistics.
+
+```bash
+POST /api/v1/innings/{inningsId}/end
+```
+
+<ParamField body="totalRuns" type="number" required>
+  Final total runs scored.
+</ParamField>
+
+<ParamField body="totalWickets" type="number" required>
+  Total wickets fallen (0-10).
+</ParamField>
+
+<ParamField body="totalOvers" type="number" required>
+  Total overs bowled (e.g., 20.0, 19.4).
+</ParamField>
+
+<CodeGroup>
+
+```bash cURL
+curl -X POST https://api.example.com/api/v1/innings/507f1f77bcf86cd799439011/end \
+  -H "Authorization: Bearer YOUR_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "totalRuns": 165,
+    "totalWickets": 7,
+    "totalOvers": 20.0
+  }'
+```
+
+```javascript JavaScript
+const response = await fetch(
+  'https://api.example.com/api/v1/innings/507f1f77bcf86cd799439011/end',
+  {
+    method: 'POST',
+    headers: {
+      'Authorization': 'Bearer YOUR_TOKEN',
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({
+      totalRuns: 165,
+      totalWickets: 7,
+      totalOvers: 20.0
+    })
+  }
+);
+
+const innings = await response.json();
+```
+
+</CodeGroup>
+
+### Start Super Over
+
+Initialize a super over for tied matches.
+
+```bash
+POST /api/v1/innings/{inningsId}/start-super-over
+```
+
+<Info>
+  Super overs are used as tiebreakers in limited-overs cricket. Each team gets one over to score as many runs as possible.
+</Info>
+
+## Player Management
+
+### Change Batsman
+
+Switch the active batsman during the innings.
+
+```bash
+POST /api/v1/innings/{inningsId}/change-batsman
+```
+
+<ParamField body="outBatsmanId" type="string" required>
+  MongoDB ObjectId of the batsman being replaced.
+</ParamField>
+
+<ParamField body="newBatsmanId" type="string" required>
+  MongoDB ObjectId of the new batsman coming in.
+</ParamField>
+
+<ParamField body="position" type="string" required>
+  Position of the new batsman: `striker` or `nonStriker`.
+</ParamField>
+
+### Change Wicket Keeper
+
+Update the wicket keeper for the innings.
+
+```bash
+POST /api/v1/innings/{inningsId}/change-wicket-keeper
+```
+
+<ParamField body="wicketKeeperId" type="string" required>
+  MongoDB ObjectId of the new wicket keeper.
+</ParamField>
+
+### Penalty Runs
+
+Add penalty runs to the innings total.
+
+```bash
+POST /api/v1/innings/{inningsId}/penalty
+```
+
+<ParamField body="runs" type="number" required>
+  Number of penalty runs to add (typically 5).
+</ParamField>
+
+<ParamField body="reason" type="string">
+  Reason for penalty runs (e.g., "Field placement violation", "Time wasting").
+</ParamField>
+
+<Tip>
+  Penalty runs are added to the team's total but don't count towards any batsman's individual score.
+</Tip>
+
+## Statistics
+
+### Get Innings Statistics
+
+Retrieve comprehensive statistics for an innings including overs, balls, and aggregated data.
+
+```bash
+GET /api/v1/innings/{inningsId}/stats
+```
+
+Response includes:
+
+- Complete innings data
+- All overs with ball-by-ball details
+- Total balls bowled
+- Total fours and sixes
+- Total extras
+- Partnership details
+- Fall of wickets
+
+<CodeGroup>
+
+```bash cURL
+curl -X GET https://api.example.com/api/v1/innings/507f1f77bcf86cd799439011/stats \
+  -H "Authorization: Bearer YOUR_TOKEN"
+```
+
+```javascript JavaScript
+const response = await fetch(
+  'https://api.example.com/api/v1/innings/507f1f77bcf86cd799439011/stats',
+  {
+    headers: {
+      'Authorization': 'Bearer YOUR_TOKEN'
+    }
+  }
+);
+
+const stats = await response.json();
+```
+
+</CodeGroup>
+
+## Response Examples
+
+<Tabs>
+  <Tab title="Create Innings">
+    ```json
+    {
+      "_id": "507f1f77bcf86cd799439011",
+      "matchId": "507f1f77bcf86cd799439010",
+      "battingTeamInstanceId": "507f1f77bcf86cd799439012",
+      "bowlingTeamInstanceId": "507f1f77bcf86cd799439013",
+      "inningNumber": 1,
+      "status": "inProgress",
+      "dayNumber": null,
+      "meta": {},
+      "createdAt": "2024-03-03T12:00:00.000Z",
+      "updatedAt": "2024-03-03T12:00:00.000Z"
+    }
+    ```
+  </Tab>
+  
+  <Tab title="Get Innings Stats">
+    ```json
+    {
+      "innings": {
+        "_id": "507f1f77bcf86cd799439011",
+        "matchId": "507f1f77bcf86cd799439010",
+        "inningNumber": 1,
+        "status": "completed",
+        "totalRuns": 165,
+        "totalWickets": 7,
+        "totalOvers": 20.0
+      },
+      "overs": [
+        {
+          "_id": "507f1f77bcf86cd799439020",
+          "overNumber": 1,
+          "bowlerId": "507f1f77bcf86cd799439014",
+          "ballCount": 6,
+          "extrasCount": 1,
+          "wicketsInOver": 0
+        }
+      ],
+      "balls": [
+        {
+          "_id": "507f1f77bcf86cd799439030",
+          "ballNumber": 1,
+          "batsmanId": "507f1f77bcf86cd799439015",
+          "runScored": 4,
+          "isFour": true
+        }
+      ],
+      "totalBalls": 120,
+      "totalFours": 18,
+      "totalSixes": 6,
+      "totalExtras": 12
+    }
+    ```
+  </Tab>
+</Tabs>
+
+## Best Practices
+
+<AccordionGroup>
+  <Accordion title="Innings creation timing">
+    Create innings before the match starts or during the toss. This ensures all data structures are ready for real-time scoring.
+  </Accordion>
+  
+  <Accordion title="Status management">
+    Always use the `/start` and `/end` endpoints to manage innings lifecycle rather than directly updating the status field. This ensures proper state transitions and triggers necessary calculations.
+  </Accordion>
+  
+  <Accordion title="Real-time updates">
+    Use WebSocket connections to receive live updates during innings. Subscribe to the match channel to get notified of every ball, wicket, and milestone.
+  </Accordion>
+  
+  <Accordion title="Error handling">
+    Handle cases where innings cannot be started (e.g., previous innings not completed) or ended (e.g., missing required data). The API will return appropriate error messages.
+  </Accordion>
+</AccordionGroup>
+
+## Related Resources
+
+<CardGroup cols={2}>
+  <Card title="Over Recording" icon="circle-dot" href="/api/overs/overview">
+    Learn how to record individual overs within an innings.
+  </Card>
+  
+  <Card title="Ball-by-Ball Scoring" icon="baseball" href="/api/balls/overview">
+    Document every delivery with comprehensive ball data.
+  </Card>
+  
+  <Card title="Match Management" icon="trophy" href="/api/matches/overview">
+    Manage the overall match lifecycle.
+  </Card>
+  
+  <Card title="Real-time Updates" icon="signal-stream" href="/concepts/real-time-updates">
+    Integrate WebSocket for live match updates.
+  </Card>
+</CardGroup>

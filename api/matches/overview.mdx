@@ -1,0 +1,128 @@
+---
+title: 'Matches API Overview'
+description: 'Comprehensive API for managing cricket matches, teams, and live scoring'
+---
+
+The Matches API provides complete functionality for creating, managing, and scoring cricket matches. It supports multiple match formats (Test, ODI, T20, Limited Overs) and handles the entire match lifecycle from creation to completion.
+
+## Match Lifecycle
+
+A typical match follows this lifecycle:
+
+1. **Create Match** - Initialize a match with teams and configuration
+2. **Register Teams** - Select playing XI, captain, wicket keeper, and scorer for each team
+3. **Start Match** - Conduct toss and begin the first innings
+4. **Live Scoring** - Update scores ball-by-ball during the match
+5. **End Match** - Complete the match and calculate results
+
+## Match Status Values
+
+Matches can have the following status values:
+
+<ParamField path="pending" type="string">
+  Match has been created but not started. Teams can be registered and match details can be edited.
+</ParamField>
+
+<ParamField path="inProgress" type="string">
+  Match is currently being played. Scores are being updated in real-time.
+</ParamField>
+
+<ParamField path="completed" type="string">
+  Match has finished. Final scores and statistics are available.
+</ParamField>
+
+<ParamField path="cancelled" type="string">
+  Match was cancelled before completion.
+</ParamField>
+
+<ParamField path="postponed" type="string">
+  Match has been postponed to a future date.
+</ParamField>
+
+## Match Types
+
+The API supports standard cricket formats with ICC-compliant rules:
+
+### Test Match
+- Duration: 2-5 days
+- Overs: Unlimited (set to high value like 450)
+- Overs per bowler: 0 (unlimited)
+- Ideal for traditional multi-day cricket
+
+### ODI (One Day International)
+- Duration: 1 day
+- Overs: Exactly 50 per innings
+- Overs per bowler: Maximum 10
+- Standard 50-over format
+
+### T20 (Twenty20)
+- Duration: 1 day
+- Overs: Exactly 20 per innings
+- Overs per bowler: Maximum 4
+- Fast-paced 20-over format
+
+### Limited Overs
+- Duration: 1 day
+- Overs: Customizable (e.g., 5, 10, 15 overs)
+- Overs per bowler: Must not exceed total overs
+- Flexible format for casual matches
+
+## Ball and Pitch Types
+
+### Ball Types
+- `leather` - Professional leather ball
+- `tennis` - Tennis ball for casual matches
+- `other` - Custom ball type
+
+### Pitch Types
+- `rough` - Rough/natural pitch
+- `cement` - Concrete pitch
+- `turf` - Natural grass pitch
+- `astroturf` - Artificial turf
+- `matting` - Matting pitch
+- `other` - Custom pitch type
+
+## Authentication
+
+Most match endpoints require authentication using a Bearer token:
+
+```bash
+Authorization: Bearer YOUR_ACCESS_TOKEN
+```
+
+Public endpoints (no authentication required):
+- GET /v1/matches/search
+- GET /v1/matches/:matchId
+- GET /v1/matches/:matchId/summary
+- GET /v1/matches/:matchId/scorecard
+- GET /v1/matches/:matchId/analysis
+
+## Base URL
+
+```
+https://api.cricpr.com/v1/matches
+```
+
+## Related APIs
+
+- [Teams API](/api/teams/overview) - Manage cricket teams
+- [Players API](/api/players/overview) - Manage player profiles
+- [Innings API](/api/innings/overview) - Handle innings and scoring
+- [Tournaments API](/api/tournaments/overview) - Organize tournament matches
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Create Match" icon="plus" href="/api/matches/create">
+    Learn how to create a new match
+  </Card>
+  <Card title="Manage Matches" icon="pen-to-square" href="/api/matches/manage">
+    Update, retrieve, and delete matches
+  </Card>
+  <Card title="Live Scoring" icon="cricket-bat-ball" href="/api/matches/scoring">
+    Start matches and update live scores
+  </Card>
+  <Card title="Match Analytics" icon="chart-line" href="/api/matches/analytics">
+    Access scorecards and statistics
+  </Card>
+</CardGroup>

@@ -1,0 +1,92 @@
+---
+title: 'Statistics API Overview'
+description: 'API endpoints for managing and retrieving player statistics in Cric PR'
+---
+
+## Overview
+
+The Statistics API provides endpoints for updating and retrieving cricket statistics for matches, innings, and players. These endpoints handle batting, bowling, and fielding statistics calculations.
+
+## Base URL
+
+```
+/v1/stats
+```
+
+## Authentication
+
+All statistics endpoints require authentication using JWT tokens. Different permissions are required:
+
+- **updateStats**: Required for updating statistics
+- **getStats**: Required for retrieving statistics
+
+## Statistics Types
+
+The API manages three types of statistics:
+
+### Batting Statistics
+- Runs scored
+- Balls faced
+- Fours and sixes
+- Strike rate
+- Average
+- Dismissal information
+- Milestones (hundreds, fifties, thirties, ducks)
+
+### Bowling Statistics
+- Balls bowled
+- Overs bowled
+- Maidens
+- Runs conceded
+- Wickets
+- Economy rate
+- Wides and no-balls
+- Dot balls
+
+### Fielding Statistics
+- Catches
+- Stumpings
+- Run outs
+- Mankading
+- Byes
+
+## Statistics Calculation
+
+Statistics are automatically calculated from ball-by-ball data:
+
+1. **Ball Data**: Each delivery records runs, extras, wickets, and other events
+2. **Over Data**: Aggregated ball data for each over
+3. **Innings Data**: Complete innings statistics
+4. **Match Data**: Full match statistics for all players
+
+The system maintains `PlayerMatchStats` that link to separate `BattingStats`, `BowlingStats`, and `FieldingStats` documents.
+
+## Update Flow
+
+```
+update-all → updateMatchStats → updateInningsStats → calculatePlayerStats
+```
+
+1. Update all active matches
+2. Update specific match (all innings)
+3. Update specific innings (all players)
+4. Calculate individual player statistics
+
+## API Endpoints
+
+Explore the Statistics API endpoints:
+
+<CardGroup cols={2}>
+  <Card title="Player Statistics" icon="user" href="/api/stats/player-stats">
+    Get and update player statistics for matches
+  </Card>
+  <Card title="Team Statistics" icon="users" href="/api/stats/team-stats">
+    Calculate and retrieve team-level statistics
+  </Card>
+</CardGroup>
+
+## Related Resources
+
+- [Match API](/api/match/overview) - Match management and scoring
+- [Player API](/api/player/overview) - Player profiles and information
+- [Team API](/api/team/overview) - Team management

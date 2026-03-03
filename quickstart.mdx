@@ -1,80 +1,532 @@
 ---
-title: "Quickstart"
-description: "Start building awesome documentation in minutes"
+title: Quick Start Guide
+description: Get started with Cric PR Backend API in under 5 minutes
 ---
 
-## Get started in three steps
+## Overview
 
-Get your documentation site running locally and make your first customization.
-
-### Step 1: Set up your local environment
-
-<AccordionGroup>
-  <Accordion icon="copy" title="Clone your docs locally">
-    During the onboarding process, you created a GitHub repository with your docs content if you didn't already have one. You can find a link to this repository in your [dashboard](https://dashboard.mintlify.com).
-    
-    To clone the repository locally so that you can make and preview changes to your docs, follow the [Cloning a repository](https://docs.github.com/en/repositories/creating-and-managing-repositories/cloning-a-repository) guide in the GitHub docs.
-  </Accordion>
-  <Accordion icon="rectangle-terminal" title="Start the preview server">
-    1. Install the Mintlify CLI: `npm i -g mint`
-    2. Navigate to your docs directory and run: `mint dev`
-    3. Open `http://localhost:3000` to see your docs live!
-    
-    <Tip>Your preview updates automatically as you edit files.</Tip>
-  </Accordion>
-</AccordionGroup>
-
-### Step 2: Deploy your changes
-
-<AccordionGroup>
-  <Accordion icon="github" title="Install our GitHub app">
-    Install the Mintlify GitHub app from your [dashboard](https://dashboard.mintlify.com/settings/organization/github-app).
-    
-    Our GitHub app automatically deploys your changes to your docs site, so you don't need to manage deployments yourself.
-</Accordion>
-<Accordion icon="palette" title="Update your site name and colors">
-    For a first change, let's update the name and colors of your docs site.
-
-    1. Open `docs.json` in your editor.
-    2. Change the `"name"` field to your project name.
-    3. Update the `"colors"` to match your brand.
-    4. Save and see your changes instantly at `http://localhost:3000`.
-
-    <Tip>Try changing the primary color to see an immediate difference!</Tip>
-  </Accordion>
-</AccordionGroup>
-
-### Step 3: Go live
-
-<Accordion icon="rocket" title="Publish your docs">
-  1. Commit and push your changes.
-  2. Your docs will update and be live in moments!
-</Accordion>
-
-## Next steps
-
-Now that you have your docs running, explore these key features:
-
-<CardGroup cols={2}>
-
-<Card title="Write Content" icon="pen-to-square" href="/essentials/markdown">
-  Learn MDX syntax and start writing your documentation.
-</Card>
-
-<Card title="Customize style" icon="palette" href="/essentials/settings">
-  Make your docs match your brand perfectly.
-</Card>
-
-<Card title="Add code examples" icon="square-code" href="/essentials/code">
-  Include syntax-highlighted code blocks.
-</Card>
-
-<Card title="API documentation" icon="code" href="/api-reference/introduction">
-  Auto-generate API docs from OpenAPI specs.
-</Card>
-
-</CardGroup>
+This guide will walk you through:
+- Setting up your development environment
+- Registering a new user account
+- Logging in and obtaining authentication tokens
+- Making your first authenticated API call
 
 <Note>
-  **Need help?** See our [full documentation](https://mintlify.com/docs) or join our [community](https://mintlify.com/community).
+  All API endpoints are prefixed with `/v1`. The base URL for production is typically `https://api.cricpr.com/v1`.
+  For local development, use `http://localhost:3000/v1`.
 </Note>
+
+## Prerequisites
+
+Before you begin, ensure you have:
+- A REST client (cURL, Postman, or your preferred HTTP client)
+- Basic understanding of REST APIs and JSON
+- Your API base URL (production or local development)
+
+<Info>
+  The API runs on port **3000** by default, with Socket.io available on port **5002** for real-time features.
+</Info>
+
+## Step 1: Register a User
+
+Create your first user account using the `/auth/register` endpoint.
+
+<Steps>
+  <Step title="Send Registration Request">
+    Submit a POST request with your user details:
+
+    <CodeGroup>
+    ```bash cURL
+    curl -X POST http://localhost:3000/v1/auth/register \
+      -H "Content-Type: application/json" \
+      -d '{
+        "name": "John Doe",
+        "email": "john.doe@example.com",
+        "password": "password123",
+        "role": "user"
+      }'
+    ```
+
+    ```javascript JavaScript (Fetch)
+    const registerUser = async () => {
+      const response = await fetch('http://localhost:3000/v1/auth/register', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          name: 'John Doe',
+          email: 'john.doe@example.com',
+          password: 'password123',
+          role: 'user'
+        })
+      });
+      
+      const data = await response.json();
+      console.log('User registered:', data);
+      return data;
+    };
+    ```
+
+    ```python Python
+    import requests
+
+    def register_user():
+        url = 'http://localhost:3000/v1/auth/register'
+        payload = {
+            'name': 'John Doe',
+            'email': 'john.doe@example.com',
+            'password': 'password123',
+            'role': 'user'
+        }
+        
+        response = requests.post(url, json=payload)
+        data = response.json()
+        print('User registered:', data)
+        return data
+    ```
+    </CodeGroup>
+
+    <Warning>
+      Password must be at least **8 characters** and contain at least **one number and one letter**.
+      The role must be either `user` or `lawfirm`.
+    </Warning>
+  </Step>
+
+  <Step title="Receive Registration Response">
+    Upon successful registration, you'll receive a response containing:
+    - **user**: User object with profile details
+    - **tokens**: Access and refresh tokens for authentication
+    - **playerProfile**: Associated player profile (automatically created)
+
+    ```json
+    {
+      "user": {
+        "_id": "507f1f77bcf86cd799439011",
+        "name": "John Doe",
+        "email": "john.doe@example.com",
+        "roles": ["507f191e810c19729de860ea"],
+        "isEmailVerified": false,
+        "createdAt": "2026-03-03T10:15:30.000Z",
+        "updatedAt": "2026-03-03T10:15:30.000Z"
+      },
+      "tokens": {
+        "access": {
+          "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+          "expires": "2026-03-03T11:15:30.000Z"
+        },
+        "refresh": {
+          "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+          "expires": "2026-04-02T10:15:30.000Z"
+        }
+      },
+      "playerProfile": {
+        "_id": "507f1f77bcf86cd799439012",
+        "userId": "507f1f77bcf86cd799439011",
+        "shortName": "John Doe",
+        "status": "incomplete_profile",
+        "createdAt": "2026-03-03T10:15:30.000Z"
+      }
+    }
+    ```
+
+    <Note>
+      The **access token** expires in 60 minutes by default, while the **refresh token** lasts 30 days.
+      Player profiles start with `incomplete_profile` status until all required fields are filled.
+    </Note>
+  </Step>
+
+  <Step title="Save Your Tokens">
+    Store the access token securely for subsequent API calls:
+
+    ```javascript
+    // Save tokens to localStorage (browser)
+    localStorage.setItem('accessToken', data.tokens.access.token);
+    localStorage.setItem('refreshToken', data.tokens.refresh.token);
+    
+    // Or save to environment variables (Node.js)
+    process.env.ACCESS_TOKEN = data.tokens.access.token;
+    ```
+  </Step>
+</Steps>
+
+## Step 2: Login to Your Account
+
+If you already have an account, login using email or phone.
+
+<CodeGroup>
+```bash Login with Email
+curl -X POST http://localhost:3000/v1/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{
+    "email": "john.doe@example.com",
+    "password": "password123"
+  }'
+```
+
+```bash Login with Phone
+curl -X POST http://localhost:3000/v1/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{
+    "phone": "92332206715",
+    "password": "password123"
+  }'
+```
+
+```javascript JavaScript
+const loginUser = async (credentials) => {
+  const response = await fetch('http://localhost:3000/v1/auth/login', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify(credentials)
+  });
+  
+  const data = await response.json();
+  
+  // Store tokens
+  localStorage.setItem('accessToken', data.tokens.access.token);
+  localStorage.setItem('refreshToken', data.tokens.refresh.token);
+  
+  return data;
+};
+
+// Usage
+await loginUser({ 
+  email: 'john.doe@example.com', 
+  password: 'password123' 
+});
+```
+</CodeGroup>
+
+<Info>
+  You can login with **either email or phone**, but not both. Only one identifier is required along with the password.
+  Optionally include an `fcmToken` for push notifications.
+</Info>
+
+## Step 3: Make an Authenticated API Call
+
+Now that you have an access token, you can make authenticated requests to protected endpoints.
+
+<Steps>
+  <Step title="Add Authorization Header">
+    Include your access token in the `Authorization` header using the Bearer scheme:
+
+    <CodeGroup>
+    ```bash cURL
+    curl -X GET http://localhost:3000/v1/users/me \
+      -H "Authorization: Bearer YOUR_ACCESS_TOKEN"
+    ```
+
+    ```javascript JavaScript
+    const getUserProfile = async () => {
+      const accessToken = localStorage.getItem('accessToken');
+      
+      const response = await fetch('http://localhost:3000/v1/users/me', {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${accessToken}`
+        }
+      });
+      
+      const user = await response.json();
+      console.log('User profile:', user);
+      return user;
+    };
+    ```
+
+    ```python Python
+    import requests
+
+    def get_user_profile(access_token):
+        url = 'http://localhost:3000/v1/users/me'
+        headers = {
+            'Authorization': f'Bearer {access_token}'
+        }
+        
+        response = requests.get(url, headers=headers)
+        user = response.json()
+        print('User profile:', user)
+        return user
+    ```
+    </CodeGroup>
+  </Step>
+
+  <Step title="Handle Token Expiration">
+    When your access token expires, use the refresh token to obtain a new one:
+
+    ```javascript
+    const refreshAccessToken = async () => {
+      const refreshToken = localStorage.getItem('refreshToken');
+      
+      const response = await fetch('http://localhost:3000/v1/auth/refresh-tokens', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ refreshToken })
+      });
+      
+      const tokens = await response.json();
+      
+      // Update stored tokens
+      localStorage.setItem('accessToken', tokens.access.token);
+      localStorage.setItem('refreshToken', tokens.refresh.token);
+      
+      return tokens;
+    };
+    ```
+
+    <Warning>
+      If you receive a `401 Unauthorized` error, your token may be expired or invalid. 
+      Use the refresh token endpoint to obtain new tokens.
+    </Warning>
+  </Step>
+</Steps>
+
+## Step 4: Explore More Endpoints
+
+Now that you're authenticated, try these common operations:
+
+<CardGroup cols={2}>
+  <Card title="Get Player Profile" icon="user">
+    ```bash
+    GET /v1/players/me
+    Authorization: Bearer YOUR_ACCESS_TOKEN
+    ```
+  </Card>
+  
+  <Card title="List All Matches" icon="list">
+    ```bash
+    GET /v1/matches?page=1&limit=10
+    Authorization: Bearer YOUR_ACCESS_TOKEN
+    ```
+  </Card>
+  
+  <Card title="Get Match Details" icon="cricket-bat-ball">
+    ```bash
+    GET /v1/matches/:matchId
+    Authorization: Bearer YOUR_ACCESS_TOKEN
+    ```
+  </Card>
+  
+  <Card title="View Player Stats" icon="chart-line">
+    ```bash
+    GET /v1/stats/players/:playerId
+    Authorization: Bearer YOUR_ACCESS_TOKEN
+    ```
+  </Card>
+</CardGroup>
+
+## Complete Example: Registration to API Call
+
+Here's a complete example that ties everything together:
+
+<CodeGroup>
+```javascript Complete Flow
+const BASE_URL = 'http://localhost:3000/v1';
+
+class CricPRClient {
+  constructor() {
+    this.accessToken = null;
+    this.refreshToken = null;
+  }
+  
+  async register(name, email, password) {
+    const response = await fetch(`${BASE_URL}/auth/register`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name, email, password, role: 'user' })
+    });
+    
+    const data = await response.json();
+    this.accessToken = data.tokens.access.token;
+    this.refreshToken = data.tokens.refresh.token;
+    
+    return data;
+  }
+  
+  async login(email, password) {
+    const response = await fetch(`${BASE_URL}/auth/login`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, password })
+    });
+    
+    const data = await response.json();
+    this.accessToken = data.tokens.access.token;
+    this.refreshToken = data.tokens.refresh.token;
+    
+    return data;
+  }
+  
+  async getMatches(page = 1, limit = 10) {
+    const response = await fetch(
+      `${BASE_URL}/matches?page=${page}&limit=${limit}`,
+      {
+        headers: { 'Authorization': `Bearer ${this.accessToken}` }
+      }
+    );
+    
+    return await response.json();
+  }
+  
+  async refreshTokens() {
+    const response = await fetch(`${BASE_URL}/auth/refresh-tokens`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ refreshToken: this.refreshToken })
+    });
+    
+    const tokens = await response.json();
+    this.accessToken = tokens.access.token;
+    this.refreshToken = tokens.refresh.token;
+    
+    return tokens;
+  }
+}
+
+// Usage
+const client = new CricPRClient();
+
+// Register new user
+await client.register('John Doe', 'john@example.com', 'password123');
+
+// Or login existing user
+// await client.login('john@example.com', 'password123');
+
+// Make authenticated API calls
+const matches = await client.getMatches(1, 10);
+console.log('Matches:', matches);
+```
+
+```python Complete Flow
+import requests
+from typing import Optional, Dict
+
+class CricPRClient:
+    def __init__(self, base_url: str = 'http://localhost:3000/v1'):
+        self.base_url = base_url
+        self.access_token: Optional[str] = None
+        self.refresh_token: Optional[str] = None
+    
+    def register(self, name: str, email: str, password: str) -> Dict:
+        url = f'{self.base_url}/auth/register'
+        payload = {
+            'name': name,
+            'email': email,
+            'password': password,
+            'role': 'user'
+        }
+        
+        response = requests.post(url, json=payload)
+        data = response.json()
+        
+        self.access_token = data['tokens']['access']['token']
+        self.refresh_token = data['tokens']['refresh']['token']
+        
+        return data
+    
+    def login(self, email: str, password: str) -> Dict:
+        url = f'{self.base_url}/auth/login'
+        payload = {'email': email, 'password': password}
+        
+        response = requests.post(url, json=payload)
+        data = response.json()
+        
+        self.access_token = data['tokens']['access']['token']
+        self.refresh_token = data['tokens']['refresh']['token']
+        
+        return data
+    
+    def get_matches(self, page: int = 1, limit: int = 10) -> Dict:
+        url = f'{self.base_url}/matches'
+        headers = {'Authorization': f'Bearer {self.access_token}'}
+        params = {'page': page, 'limit': limit}
+        
+        response = requests.get(url, headers=headers, params=params)
+        return response.json()
+    
+    def refresh_tokens(self) -> Dict:
+        url = f'{self.base_url}/auth/refresh-tokens'
+        payload = {'refreshToken': self.refresh_token}
+        
+        response = requests.post(url, json=payload)
+        tokens = response.json()
+        
+        self.access_token = tokens['access']['token']
+        self.refresh_token = tokens['refresh']['token']
+        
+        return tokens
+
+# Usage
+client = CricPRClient()
+
+# Register new user
+client.register('John Doe', 'john@example.com', 'password123')
+
+# Or login existing user
+# client.login('john@example.com', 'password123')
+
+# Make authenticated API calls
+matches = client.get_matches(page=1, limit=10)
+print('Matches:', matches)
+```
+</CodeGroup>
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Learn About Authentication" icon="shield" href="/authentication">
+    Understand JWT tokens, security best practices, and token management
+  </Card>
+  <Card title="Explore API Reference" icon="book" href="/api/auth/overview">
+    Browse all available endpoints with detailed documentation
+  </Card>
+  <Card title="Real-Time Updates" icon="bolt" href="/concepts/real-time-updates">
+    Connect to Socket.io for live match scoring and notifications
+  </Card>
+  <Card title="WebSocket Integration" icon="triangle-exclamation" href="/guides/websocket-integration">
+    Learn how to integrate WebSocket connections for real-time features
+  </Card>
+</CardGroup>
+
+## Common Issues
+
+<AccordionGroup>
+  <Accordion title="401 Unauthorized Error">
+    This usually means your access token is expired or invalid. Try:
+    1. Verify the token is being sent in the `Authorization: Bearer TOKEN` format
+    2. Check if the token has expired (access tokens last 60 minutes)
+    3. Use the refresh token endpoint to get a new access token
+    4. Re-login if the refresh token has also expired
+  </Accordion>
+  
+  <Accordion title="400 Bad Request - Password Validation Failed">
+    Passwords must meet these requirements:
+    - Minimum 8 characters in length
+    - At least one letter (a-z or A-Z)
+    - At least one number (0-9)
+    
+    Example valid passwords: `password123`, `MyPass99`, `secure2026`
+  </Accordion>
+  
+  <Accordion title="400 Bad Request - Email Already Exists">
+    The email address is already registered. Try:
+    1. Using the `/auth/login` endpoint instead
+    2. Using the `/auth/forgot-password` endpoint if you forgot your password
+    3. Registering with a different email address
+  </Accordion>
+  
+  <Accordion title="Connection Refused (ECONNREFUSED)">
+    The API server is not running. Ensure:
+    1. The backend server is started (check if running on port 3000)
+    2. You're using the correct base URL
+    3. There are no firewall or network issues blocking the connection
+  </Accordion>
+</AccordionGroup>
+
+<Info>
+  For more detailed information about authentication flows and security, check out the [Authentication Guide](/authentication).
+</Info>

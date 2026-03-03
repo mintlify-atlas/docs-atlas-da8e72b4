@@ -1,0 +1,588 @@
+---
+title: 'Group Management'
+description: 'Manage tournament stages, groups, and team assignments'
+---
+
+## Overview
+
+Tournament groups organize teams within stages. A tournament can have multiple stages (Group Stage, Knockout, etc.), and each stage can have multiple groups (Group A, Group B, etc.).
+
+## Add Teams to Tournament
+
+Before creating stages, add teams to the tournament.
+
+<RequestExample>
+```bash cURL
+curl -X POST 'https://api.example.com/v1/tournaments/65f8b2a4c1234567890abcde/teams' \
+  -H 'Authorization: Bearer <token>' \
+  -H 'Content-Type: application/json' \
+  -d '[
+    {
+      "teamId": "65f8b2a4c1234567890abc01",
+      "registeredBy": "65f8b2a4c1234567890xyz01",
+      "paymentStatus": "paid",
+      "amountPaid": 2000
+    },
+    {
+      "teamId": "65f8b2a4c1234567890abc02",
+      "registeredBy": "65f8b2a4c1234567890xyz02",
+      "paymentStatus": "paid",
+      "amountPaid": 2000
+    }
+  ]'
+```
+</RequestExample>
+
+### Endpoint
+
+```
+POST /v1/tournaments/{tournamentId}/teams
+```
+
+### Authentication
+
+<Icon icon="lock" /> Requires authentication
+
+### Path Parameters
+
+<ParamField path="tournamentId" type="string" required>
+  Tournament ID to add teams to.
+</ParamField>
+
+### Request Body
+
+Array of team registration objects:
+
+<ParamField body="teamId" type="string" required>
+  Team ID to register.
+</ParamField>
+
+<ParamField body="registeredBy" type="string" required>
+  Player ID who registered the team.
+</ParamField>
+
+<ParamField body="paymentStatus" type="string">
+  Payment status for entry fee.
+  
+  **Options:** pending, paid, waived, refunded
+  
+  **Default:** pending
+</ParamField>
+
+<ParamField body="amountPaid" type="number">
+  Amount paid for entry fee. Default: 0
+</ParamField>
+
+<ParamField body="notes" type="string">
+  Additional registration notes.
+</ParamField>
+
+### Response
+
+<ResponseExample>
+```json 201 - Created
+{
+  "message": "Teams successfully added to tournament",
+  "count": 2
+}
+```
+
+```json 400 - Tournament Full
+{
+  "code": 400,
+  "message": "Tournament cannot accommodate all teams"
+}
+```
+
+```json 400 - Team Already Registered
+{
+  "code": 400,
+  "message": "Validation errors: Team 65f8b2a4c1234567890abc01 already registered for this tournament"
+}
+```
+</ResponseExample>
+
+## Create Tournament Stage
+
+Create a stage (Group Stage, Knockout, etc.) with groups and team assignments.
+
+<RequestExample>
+```bash cURL
+curl -X POST 'https://api.example.com/v1/tournaments/65f8b2a4c1234567890abcde/stages' \
+  -H 'Authorization: Bearer <token>' \
+  -H 'Content-Type: application/json' \
+  -d '{
+    "name": "Group Stage",
+    "format": "round_robin",
+    "hasGroups": true,
+    "numberOfGroups": 2,
+    "advancingTeamsPerGroup": 2,
+    "pointsForWin": 2,
+    "pointsForDraw": 1,
+    "pointsForLoss": 0,
+    "pointsForNoResult": 1,
+    "groups": [
+      {
+        "groupName": "Group A",
+        "teamIds": [
+          "65f8b2a4c1234567890abc01",
+          "65f8b2a4c1234567890abc02",
+          "65f8b2a4c1234567890abc03",
+          "65f8b2a4c1234567890abc04"
+        ]
+      },
+      {
+        "groupName": "Group B",
+        "teamIds": [
+          "65f8b2a4c1234567890abc05",
+          "65f8b2a4c1234567890abc06",
+          "65f8b2a4c1234567890abc07",
+          "65f8b2a4c1234567890abc08"
+        ]
+      }
+    ]
+  }'
+```
+</RequestExample>
+
+### Endpoint
+
+```
+POST /v1/tournaments/{tournamentId}/stages
+```
+
+### Authentication
+
+<Icon icon="lock" /> Requires authentication
+
+### Path Parameters
+
+<ParamField path="tournamentId" type="string" required>
+  Tournament ID to create stage in.
+</ParamField>
+
+### Request Body
+
+<ParamField body="name" type="string" required>
+  Stage name.
+  
+  **Example:** "Group Stage", "Semi Finals", "Finals"
+</ParamField>
+
+<ParamField body="format" type="string" required>
+  Stage format.
+  
+  **Options:**
+  - `round_robin` - All teams play each other
+  - `knockout` - Single elimination
+  - `point_based` - Custom points system
+</ParamField>
+
+<ParamField body="hasGroups" type="boolean">
+  Whether stage has multiple groups. Default: false
+</ParamField>
+
+<ParamField body="numberOfGroups" type="number">
+  Number of groups in stage. Required if hasGroups is true.
+</ParamField>
+
+<ParamField body="teamsPerGroup" type="number">
+  Teams per group. Minimum: 2
+</ParamField>
+
+<ParamField body="advancingTeamsPerGroup" type="number">
+  Number of teams advancing from each group to next stage.
+  
+  **Default:** 1
+</ParamField>
+
+<ParamField body="pointsForWin" type="number">
+  Points awarded for winning a match. Default: 2
+</ParamField>
+
+<ParamField body="pointsForDraw" type="number">
+  Points awarded for a drawn match. Default: 1
+</ParamField>
+
+<ParamField body="pointsForLoss" type="number">
+  Points awarded for losing a match. Default: 0
+</ParamField>
+
+<ParamField body="pointsForNoResult" type="number">
+  Points awarded for no result. Default: 1
+</ParamField>
+
+<ParamField body="description" type="string">
+  Stage description.
+</ParamField>
+
+<ParamField body="groups" type="array">
+  Array of group objects with teams. Required if hasGroups is true.
+  
+  Each group object contains:
+  - `groupName` (string, required): Group name (e.g., "Group A")
+  - `teamIds` (array, required): Array of team IDs in this group
+</ParamField>
+
+### Response
+
+<ResponseField name="stage" type="object">
+  Created stage object.
+  
+  **Properties:**
+  - `id`: Stage ID
+  - `name`: Stage name
+  - `format`: Stage format
+  - `stageOrder`: Order of this stage (1, 2, 3, etc.)
+  - `status`: Stage status (upcoming, ongoing, completed)
+  - `hasGroups`: Whether stage has groups
+  - `numberOfGroups`: Number of groups
+  - `advancingTeamsPerGroup`: Teams advancing per group
+  - `pointsForWin/Draw/Loss/NoResult`: Point rules
+</ResponseField>
+
+<ResponseField name="groups" type="array">
+  Array of created group objects.
+  
+  **Properties:**
+  - `id`: Group ID
+  - `groupName`: Group name
+  - `groupOrder`: Group order
+  - `stageId`: Parent stage ID
+  - `tournamentId`: Parent tournament ID
+  - `currentTeamsCount`: Number of teams in group
+  - `status`: Group status
+</ResponseField>
+
+<ResponseExample>
+```json 201 - Created
+{
+  "stage": {
+    "id": "65f8b2a4c1234567890stg01",
+    "name": "Group Stage",
+    "format": "round_robin",
+    "stageOrder": 1,
+    "status": "upcoming",
+    "hasGroups": true,
+    "numberOfGroups": 2,
+    "teamsPerGroup": 4,
+    "advancingTeamsPerGroup": 2,
+    "pointsForWin": 2,
+    "pointsForDraw": 1,
+    "pointsForLoss": 0,
+    "pointsForNoResult": 1,
+    "tournamentId": "65f8b2a4c1234567890abcde",
+    "createdAt": "2024-03-03T10:30:00.000Z",
+    "updatedAt": "2024-03-03T10:30:00.000Z"
+  },
+  "groups": [
+    {
+      "id": "65f8b2a4c1234567890grp01",
+      "groupName": "Group A",
+      "groupOrder": 1,
+      "stageId": "65f8b2a4c1234567890stg01",
+      "tournamentId": "65f8b2a4c1234567890abcde",
+      "currentTeamsCount": 4,
+      "status": "active"
+    },
+    {
+      "id": "65f8b2a4c1234567890grp02",
+      "groupName": "Group B",
+      "groupOrder": 2,
+      "stageId": "65f8b2a4c1234567890stg01",
+      "tournamentId": "65f8b2a4c1234567890abcde",
+      "currentTeamsCount": 4,
+      "status": "active"
+    }
+  ]
+}
+```
+
+```json 400 - Validation Error
+{
+  "code": 400,
+  "message": "Only one round-robin stage is allowed per tournament"
+}
+```
+
+```json 400 - Cannot Create Knockout
+{
+  "code": 400,
+  "message": "Cannot create knockout stage. Total qualified teams (3) must be a power of 2 (2^n) and greater than 1. Only round-robin stages are allowed."
+}
+```
+</ResponseExample>
+
+## Stage Progression Rules
+
+The API enforces stage progression rules:
+
+### Round Robin Stage
+- Only **one** round-robin stage allowed initially
+- Must complete all group matches before creating next stage
+
+### Knockout Stage
+- Can only be created if qualified teams = 2^n (2, 4, 8, 16, etc.)
+- If qualified teams ≠ 2^n, must create another round-robin stage
+
+### Tournament Winner
+- If single group with `advancingTeamsPerGroup = 1`: Top team wins automatically
+- Cannot create more stages once winner is determined
+
+## Get Tournament Stages
+
+Retrieve all stages for a tournament.
+
+<RequestExample>
+```bash cURL
+curl -X GET 'https://api.example.com/v1/tournaments/65f8b2a4c1234567890abcde/stages' \
+  -H 'Content-Type: application/json'
+```
+</RequestExample>
+
+### Endpoint
+
+```
+GET /v1/tournaments/{tournamentId}/stages
+```
+
+### Authentication
+
+<Icon icon="unlock" /> No authentication required
+
+### Response
+
+Returns array of stage objects sorted by stageOrder.
+
+## Create Group
+
+Create a new group within a stage (alternative to creating groups with stage).
+
+<RequestExample>
+```bash cURL
+curl -X POST 'https://api.example.com/v1/tournaments/stages/65f8b2a4c1234567890stg01/groups' \
+  -H 'Authorization: Bearer <token>' \
+  -H 'Content-Type: application/json' \
+  -d '{
+    "groupName": "Group C"
+  }'
+```
+</RequestExample>
+
+### Endpoint
+
+```
+POST /v1/tournaments/stages/{stageId}/groups
+```
+
+### Authentication
+
+<Icon icon="lock" /> Requires authentication
+
+### Path Parameters
+
+<ParamField path="stageId" type="string" required>
+  Stage ID to create group in.
+</ParamField>
+
+### Request Body
+
+<ParamField body="groupName" type="string" required>
+  Unique group name within the stage.
+</ParamField>
+
+<ParamField body="groupOrder" type="number">
+  Group display order. Auto-increments if not provided.
+</ParamField>
+
+## Add Team to Group
+
+Add a team to a specific group within a stage.
+
+<RequestExample>
+```bash cURL
+curl -X POST 'https://api.example.com/v1/tournaments/groups/65f8b2a4c1234567890grp01/teams' \
+  -H 'Authorization: Bearer <token>' \
+  -H 'Content-Type: application/json' \
+  -d '{
+    "teamId": "65f8b2a4c1234567890abc01",
+    "seedNumber": 1
+  }'
+```
+</RequestExample>
+
+### Endpoint
+
+```
+POST /v1/tournaments/groups/{groupId}/teams
+```
+
+### Authentication
+
+<Icon icon="lock" /> Requires authentication
+
+### Path Parameters
+
+<ParamField path="groupId" type="string" required>
+  Group ID to add team to.
+</ParamField>
+
+### Request Body
+
+<ParamField body="teamId" type="string" required>
+  Team ID to add to group.
+</ParamField>
+
+<ParamField body="seedNumber" type="number">
+  Seed number for team ranking within group.
+</ParamField>
+
+## Get Group Teams
+
+Retrieve all teams in a specific group.
+
+<RequestExample>
+```bash cURL
+curl -X GET 'https://api.example.com/v1/tournaments/groups/65f8b2a4c1234567890grp01/teams' \
+  -H 'Content-Type: application/json'
+```
+</RequestExample>
+
+### Endpoint
+
+```
+GET /v1/tournaments/groups/{groupId}/teams
+```
+
+### Authentication
+
+<Icon icon="unlock" /> No authentication required
+
+## Remove Team from Group
+
+Remove a team from a group.
+
+<RequestExample>
+```bash cURL
+curl -X DELETE 'https://api.example.com/v1/tournaments/groups/65f8b2a4c1234567890grp01/teams/65f8b2a4c1234567890abc01' \
+  -H 'Authorization: Bearer <token>'
+```
+</RequestExample>
+
+### Endpoint
+
+```
+DELETE /v1/tournaments/groups/{groupId}/teams/{teamId}
+```
+
+### Authentication
+
+<Icon icon="lock" /> Requires authentication
+
+## Generate Round Robin Matches
+
+Automatically generate all round-robin matches for a stage.
+
+<RequestExample>
+```bash cURL
+curl -X POST 'https://api.example.com/v1/tournaments/stages/65f8b2a4c1234567890stg01/generate-matches' \
+  -H 'Authorization: Bearer <token>' \
+  -H 'Content-Type: application/json'
+```
+</RequestExample>
+
+### Endpoint
+
+```
+POST /v1/tournaments/stages/{stageId}/generate-matches
+```
+
+### Authentication
+
+<Icon icon="lock" /> Requires authentication
+
+### Path Parameters
+
+<ParamField path="stageId" type="string" required>
+  Stage ID to generate matches for.
+</ParamField>
+
+### Behavior
+
+For each group in the stage:
+- Generates all possible team pairings
+- Formula: `n * (n-1) / 2` matches per group (where n = number of teams)
+- Example: 4 teams = 6 matches (A vs B, A vs C, A vs D, B vs C, B vs D, C vs D)
+
+### Response
+
+Returns array of created tournament match objects.
+
+<ResponseExample>
+```json 200 - Matches Generated
+[
+  {
+    "id": "65f8b2a4c1234567890mtc01",
+    "tournamentId": "65f8b2a4c1234567890abcde",
+    "stageId": "65f8b2a4c1234567890stg01",
+    "groupId": "65f8b2a4c1234567890grp01",
+    "matchNumber": 1,
+    "matchType": "group",
+    "scheduledDate": null,
+    "status": "scheduled"
+  }
+]
+```
+</ResponseExample>
+
+## Update Stage
+
+Update stage configuration.
+
+<RequestExample>
+```bash cURL
+curl -X PATCH 'https://api.example.com/v1/tournaments/stages/65f8b2a4c1234567890stg01' \
+  -H 'Authorization: Bearer <token>' \
+  -H 'Content-Type: application/json' \
+  -d '{
+    "advancingTeamsPerGroup": 3
+  }'
+```
+</RequestExample>
+
+### Endpoint
+
+```
+PATCH /v1/tournaments/stages/{stageId}
+```
+
+### Authentication
+
+<Icon icon="lock" /> Requires authentication
+
+## Delete Stage
+
+Delete a tournament stage.
+
+<RequestExample>
+```bash cURL
+curl -X DELETE 'https://api.example.com/v1/tournaments/stages/65f8b2a4c1234567890stg01' \
+  -H 'Authorization: Bearer <token>'
+```
+</RequestExample>
+
+### Endpoint
+
+```
+DELETE /v1/tournaments/stages/{stageId}
+```
+
+### Authentication
+
+<Icon icon="lock" /> Requires authentication
+
+## Next Steps
+
+1. [Generate round-robin matches](#generate-round-robin-matches) for the stage
+2. [Track points and standings](/api/tournaments/points-table) as matches complete
+3. Create knockout stages after group stages complete

@@ -1,0 +1,225 @@
+---
+title: 'Players API Overview'
+description: 'Manage cricket player profiles, statistics, and player data'
+---
+
+The Players API allows you to create and manage player profiles, track cricket statistics, and query players by various attributes.
+
+## Base Endpoint
+
+All player endpoints are prefixed with `/v1/players`
+
+## Authentication
+
+Most player endpoints require authentication via Bearer token. Public endpoints like listing and viewing players do not require authentication.
+
+## Player Object
+
+The player object contains the following fields:
+
+<ResponseField name="id" type="string">
+  Unique identifier for the player
+</ResponseField>
+
+<ResponseField name="userId" type="string">
+  Associated user account ID
+</ResponseField>
+
+<ResponseField name="shortName" type="string">
+  Player's display name or nickname
+</ResponseField>
+
+<ResponseField name="battingStyle" type="string">
+  Batting style. Options:
+  - `Right-hand bat`
+  - `Left-hand bat`
+  - `none`
+</ResponseField>
+
+<ResponseField name="bowlingStyle" type="string">
+  Bowling style. Options:
+  - `Right-arm fast`
+  - `Right-arm medium`
+  - `Right-arm off-break`
+  - `Right-arm leg-break`
+  - `Left-arm fast`
+  - `Left-arm medium`
+  - `Slow left-arm orthodox`
+  - `Left-arm chinaman`
+  - `none`
+</ResponseField>
+
+<ResponseField name="playingRole" type="string">
+  Player's primary role (e.g., "Batsman", "Bowler", "All-rounder", "Wicket-keeper")
+</ResponseField>
+
+<ResponseField name="isGuest" type="boolean" default="false">
+  Whether the player is a guest player (not linked to user account)
+</ResponseField>
+
+<ResponseField name="isVerified" type="boolean" default="false">
+  Whether the player profile is verified
+</ResponseField>
+
+<ResponseField name="status" type="string" default="active">
+  Player account status:
+  - `active` - Active player
+  - `incomplete_profile` - Profile needs completion
+  - `deactivated` - Temporarily deactivated
+  - `deleted` - Soft deleted
+</ResponseField>
+
+<ResponseField name="createdAt" type="string">
+  ISO 8601 timestamp of player creation
+</ResponseField>
+
+<ResponseField name="updatedAt" type="string">
+  ISO 8601 timestamp of last update
+</ResponseField>
+
+## Core Endpoints
+
+### Player Management
+
+- [Create Player](/api/players/manage#create-player) - Create a new player profile
+- [Get Players](/api/players/manage#get-players) - List all players with filters
+- [Get Player](/api/players/manage#get-player) - Get a specific player by ID
+- [Update Player](/api/players/manage#update-player) - Update player details
+- [Delete Player](/api/players/manage#delete-player) - Delete a player (soft delete)
+- [Search Players](/api/players/manage#search-players) - Search players by name, email, or attributes
+- [Update Profile](/api/players/manage#update-profile) - Update player profile fields
+- [Verify Player](/api/players/manage#verify-player) - Mark player as verified
+
+### Player Statistics
+
+- [Get Player Stats](/api/players/statistics#get-player-stats) - Get comprehensive player statistics
+- [Get Players by Role](/api/players/statistics#get-players-by-role) - Filter players by playing role
+- [Get Players by Batting Style](/api/players/statistics#get-players-by-batting) - Filter by batting style
+- [Get Players by Bowling Style](/api/players/statistics#get-players-by-bowling) - Filter by bowling style
+
+## Common Use Cases
+
+### Creating a Player Profile
+
+```bash
+curl -X POST https://api.cricpr.com/v1/players \
+  -H "Authorization: Bearer YOUR_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "userId": "6887d2f86e607c4c48b33c65",
+    "shortName": "Ahmed K",
+    "battingStyle": "Right-hand bat",
+    "bowlingStyle": "Right-arm fast",
+    "playingRole": "All-rounder"
+  }'
+```
+
+### Getting Player Statistics
+
+```bash
+curl https://api.cricpr.com/v1/players/PLAYER_ID/stats
+```
+
+### Searching for Players
+
+```bash
+curl "https://api.cricpr.com/v1/players/search?query=ahmed"
+```
+
+### Filtering by Attributes
+
+```bash
+# Get all right-hand batsmen
+curl https://api.cricpr.com/v1/players/batting-style/Right-hand%20bat
+
+# Get all fast bowlers
+curl https://api.cricpr.com/v1/players/bowling-style/Right-arm%20fast
+
+# Get all all-rounders
+curl https://api.cricpr.com/v1/players/role/All-rounder
+```
+
+## Player Status
+
+Player records use soft deletion and status management:
+
+### Status Values
+
+- **active** - Player is active and can participate in matches
+- **incomplete_profile** - Player profile needs additional information
+- **deactivated** - Player temporarily deactivated their account
+- **deleted** - Player soft deleted (hidden from queries by default)
+
+### Status Filtering
+
+Many endpoints support a `statusFilter` query parameter:
+
+- `not_deleted` (default) - Excludes deleted players
+- `active` - Only active and incomplete_profile players
+- `all` - Include all players regardless of status
+
+```bash
+# Get only active players
+curl "https://api.cricpr.com/v1/players?statusFilter=active"
+
+# Get all players including deleted
+curl "https://api.cricpr.com/v1/players?statusFilter=all"
+```
+
+## Batting Styles
+
+Supported batting styles:
+
+- `Right-hand bat` - Right-handed batsman
+- `Left-hand bat` - Left-handed batsman  
+- `none` - Batting style not specified
+
+## Bowling Styles
+
+Supported bowling styles:
+
+**Fast Bowling**
+- `Right-arm fast`
+- `Right-arm medium`
+- `Left-arm fast`
+- `Left-arm medium`
+
+**Spin Bowling**
+- `Right-arm off-break` (Off-spin)
+- `Right-arm leg-break` (Leg-spin)
+- `Slow left-arm orthodox` (Left-arm spin)
+- `Left-arm chinaman` (Left-arm wrist spin)
+
+**Other**
+- `none` - Bowling style not specified
+
+## Pagination
+
+List endpoints support pagination with the following query parameters:
+
+- `page` - Page number (default: 1)
+- `limit` - Items per page (default: 10, max: 100)
+- `sortBy` - Sort field in format `field:asc` or `field:desc`
+
+## Error Handling
+
+The Players API uses standard HTTP status codes:
+
+- `200` - Success
+- `201` - Created successfully
+- `204` - Deleted successfully (no content)
+- `400` - Bad request (validation error)
+- `401` - Unauthorized (missing or invalid token)
+- `404` - Player not found
+- `409` - Conflict (e.g., user already has a player profile)
+- `500` - Server error
+
+## Player vs User
+
+Understanding the relationship:
+
+- **User** - Authentication account with email/password
+- **Player** - Cricket profile linked to a user account
+- One user can have one player profile
+- Guest players (`isGuest: true`) are not linked to user accounts
+- Player ID is used for teams, matches, and statistics

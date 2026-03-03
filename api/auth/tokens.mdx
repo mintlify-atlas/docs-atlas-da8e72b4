@@ -1,0 +1,188 @@
+---
+title: 'Token Management'
+description: 'Refresh access tokens and logout endpoints'
+---
+
+## Refresh Tokens
+
+<api method="POST" path="/v1/auth/refresh-tokens">
+  Refresh authentication tokens using a valid refresh token
+</api>
+
+### Request Body
+
+<ParamField body="refreshToken" type="string" required>
+  The refresh token obtained from login or registration. Must be a valid, non-expired, and non-blacklisted token.
+</ParamField>
+
+### Response
+
+<ResponseField name="access" type="object">
+  New access token information
+  
+  <Expandable title="access properties">
+    <ResponseField name="token" type="string">
+      New JWT access token string. Valid for 30 minutes.
+    </ResponseField>
+    
+    <ResponseField name="expires" type="string">
+      ISO 8601 datetime when the new access token expires
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+<ResponseField name="refresh" type="object">
+  New refresh token information
+  
+  <Expandable title="refresh properties">
+    <ResponseField name="token" type="string">
+      New JWT refresh token string. Valid for 30 days.
+    </ResponseField>
+    
+    <ResponseField name="expires" type="string">
+      ISO 8601 datetime when the new refresh token expires
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+### Example Request
+
+```bash
+curl -X POST https://api.cricpr.com/v1/auth/refresh-tokens \
+  -H "Content-Type: application/json" \
+  -d '{
+    "refreshToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI2N2EyNTk2Y2QzZGVmYTExYjA3OWI5NDMiLCJpYXQiOjE3Mzg4NDU2NTIsImV4cCI6MTc0MTQzNzY1MiwidHlwZSI6InJlZnJlc2gifQ.pK8mN7vT2sJ9QzR4Lx6eH3oY1fW5"
+  }'
+```
+
+### Example Response
+
+<ResponseExample>
+```json 200 - OK
+{
+  "access": {
+    "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI2N2EyNTk2Y2QzZGVmYTExYjA3OWI5NDMiLCJpYXQiOjE3Mzg4NDc0NTIsImV4cCI6MTczODg0OTI1MiwidHlwZSI6ImFjY2VzcyJ9.nR5K9pL2MvB8TgH7Js6fE4oZ1xW3",
+    "expires": "2026-03-03T15:49:10.722Z"
+  },
+  "refresh": {
+    "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI2N2EyNTk2Y2QzZGVmYTExYjA3OWI5NDMiLCJpYXQiOjE3Mzg4NDc0NTIsImV4cCI6MTc0MTQzOTQ1MiwidHlwZSI6InJlZnJlc2gifQ.mJ9qO3tL7wK2RzS5Ny8hG6pY2fX4",
+    "expires": "2026-04-02T15:19:10.722Z"
+  }
+}
+```
+
+```json 401 - Unauthorized
+{
+  "code": 401,
+  "message": "Please authenticate"
+}
+```
+</ResponseExample>
+
+### Error Responses
+
+<ResponseField name="401" type="error">
+  **Unauthorized** - Invalid or expired refresh token
+  
+  Common causes:
+  - Refresh token has expired (after 30 days)
+  - Token is invalid or malformed
+  - Token has been blacklisted (user logged out)
+  - Associated user account no longer exists
+</ResponseField>
+
+### Notes
+
+- The old refresh token is deleted from the database when new tokens are generated
+- Both a new access token AND a new refresh token are returned
+- This endpoint should be called when the access token expires (after 30 minutes)
+- Store the new refresh token securely and use it for subsequent refresh requests
+
+---
+
+## Logout
+
+<api method="POST" path="/v1/auth/logout">
+  Logout user by invalidating their refresh token
+</api>
+
+### Request Body
+
+<ParamField body="refreshToken" type="string" required>
+  The refresh token to invalidate. This will be deleted from the database, preventing future token refreshes.
+</ParamField>
+
+### Response
+
+Returns HTTP 204 (No Content) on successful logout with no response body.
+
+### Example Request
+
+```bash
+curl -X POST https://api.cricpr.com/v1/auth/logout \
+  -H "Content-Type: application/json" \
+  -d '{
+    "refreshToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI2N2EyNTk2Y2QzZGVmYTExYjA3OWI5NDMiLCJpYXQiOjE3Mzg4NDU2NTIsImV4cCI6MTc0MTQzNzY1MiwidHlwZSI6InJlZnJlc2gifQ.pK8mN7vT2sJ9QzR4Lx6eH3oY1fW5"
+  }'
+```
+
+### Example Response
+
+<ResponseExample>
+```text 204 - No Content
+```
+
+```json 404 - Not Found
+{
+  "code": 404,
+  "message": "Not found"
+}
+```
+</ResponseExample>
+
+### Error Responses
+
+<ResponseField name="404" type="error">
+  **Not Found** - Refresh token not found or already blacklisted
+  
+  Common causes:
+  - Token doesn't exist in the database
+  - Token was already used to logout
+  - Token is invalid or malformed
+</ResponseField>
+
+### Notes
+
+- Logging out only invalidates the refresh token, not the access token
+- The access token will continue to work until it expires (30 minutes from issue time)
+- For complete logout, the client should also discard the stored access token
+- Once a refresh token is used for logout, it cannot be used again for token refresh
+
+---
+
+## Token Lifecycle
+
+### Normal Flow
+
+1. **Login/Register** → Receive access token (30 min) + refresh token (30 days)
+2. **Use access token** → Make authenticated API requests
+3. **Access token expires** → Use refresh token to get new tokens
+4. **Repeat** → Continue using new access tokens
+5. **Logout** → Invalidate refresh token
+
+### Token Expiration Details
+
+| Token Type | Expiration | Configuration |
+|------------|------------|---------------|
+| Access Token | 30 minutes | `JWT_ACCESS_EXPIRATION_MINUTES` |
+| Refresh Token | 30 days | `JWT_REFRESH_EXPIRATION_DAYS` |
+| Reset Password Token | 10 minutes | `JWT_RESET_PASSWORD_EXPIRATION_MINUTES` |
+| Verify Email Token | 10 minutes | `JWT_VERIFY_EMAIL_EXPIRATION_MINUTES` |
+
+### Best Practices
+
+- **Store refresh tokens securely** (e.g., secure HTTP-only cookies or encrypted storage)
+- **Implement automatic token refresh** before access token expires
+- **Handle 401 errors** by attempting token refresh before prompting re-login
+- **Clear both tokens** on logout from the client side
+- **Don't expose refresh tokens** in logs, URLs, or client-side code

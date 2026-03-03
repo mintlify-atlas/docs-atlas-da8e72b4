@@ -1,0 +1,101 @@
+---
+title: 'Authentication Overview'
+description: 'Overview of authentication endpoints and JWT token management'
+---
+
+## Authentication System
+
+The Cric PR Backend uses JWT (JSON Web Tokens) for authentication. The system supports multiple authentication methods:
+
+- **Email/Password** - Traditional authentication with email and password
+- **Phone/Password** - Authentication using phone number and password
+- **Google OAuth** - Social authentication via Google
+- **Apple Sign In** - Social authentication via Apple
+
+## Token Structure
+
+The API uses two types of tokens:
+
+### Access Token
+- **Type**: `access`
+- **Expiration**: 30 minutes (configurable via `JWT_ACCESS_EXPIRATION_MINUTES`)
+- **Usage**: Include in Authorization header for authenticated requests
+- **Format**: `Bearer <access_token>`
+
+### Refresh Token
+- **Type**: `refresh`
+- **Expiration**: 30 days (configurable via `JWT_REFRESH_EXPIRATION_DAYS`)
+- **Usage**: Used to obtain new access tokens without re-authentication
+- **Storage**: Stored in database and must be provided for token refresh
+
+## JWT Payload Structure
+
+All tokens contain the following claims:
+
+```json
+{
+  "sub": "user_id",
+  "iat": 1234567890,
+  "exp": 1234569890,
+  "type": "access" // or "refresh"
+}
+```
+
+## Authentication Flow
+
+### Registration & Login Flow
+
+1. User registers via `/v1/auth/register` or logs in via `/v1/auth/login`
+2. Server returns both access and refresh tokens along with user data
+3. Client stores both tokens securely
+4. Client includes access token in Authorization header for subsequent requests
+5. When access token expires, use refresh token via `/v1/auth/refresh-tokens` to get new tokens
+
+### Token Refresh Flow
+
+1. Access token expires (after 30 minutes)
+2. Client sends refresh token to `/v1/auth/refresh-tokens`
+3. Server validates refresh token and issues new access and refresh tokens
+4. Old refresh token is deleted from database
+5. Client updates stored tokens
+
+## Error Codes
+
+Common authentication error responses:
+
+| Status Code | Description |
+|-------------|-------------|
+| `400` | Bad Request - Invalid parameters or validation errors |
+| `401` | Unauthorized - Invalid credentials or expired token |
+| `403` | Forbidden - Account deactivated or deleted |
+| `404` | Not Found - User not found or token not found |
+| `409` | Conflict - Email already exists or account linking issue |
+
+## Security Features
+
+- **Password Requirements**: Minimum 8 characters with at least 1 letter and 1 number
+- **Token Blacklisting**: Logout invalidates refresh tokens by deleting them
+- **Email Verification**: OTP-based email verification system
+- **Password Reset**: Secure token-based password reset flow
+- **Provider Validation**: Social login tokens are validated before creating/linking accounts
+
+## Base URL
+
+All authentication endpoints are prefixed with:
+
+```
+/v1/auth
+```
+
+## Available Endpoints
+
+- [POST /v1/auth/register](/api/auth/register) - Register a new user
+- [POST /v1/auth/login](/api/auth/login) - Login with email/phone and password
+- [POST /v1/auth/refresh-tokens](/api/auth/tokens) - Refresh access tokens
+- [POST /v1/auth/logout](/api/auth/tokens) - Logout and invalidate refresh token
+- POST /v1/auth/forgot-password - Request password reset
+- POST /v1/auth/reset-password - Reset password with token
+- POST /v1/auth/send-verification-email - Send OTP for email verification
+- POST /v1/auth/verify-email - Verify email with OTP
+- POST /v1/auth/google - Authenticate with Google
+- POST /v1/auth/apple - Authenticate with Apple

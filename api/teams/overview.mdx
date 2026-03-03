@@ -1,0 +1,178 @@
+---
+title: 'Teams API Overview'
+description: 'Manage cricket teams, rosters, and team settings'
+---
+
+The Teams API allows you to create and manage cricket teams, including team rosters, captains, and team metadata.
+
+## Base Endpoint
+
+All team endpoints are prefixed with `/v1/teams`
+
+## Authentication
+
+Most team endpoints require authentication via Bearer token. See [Authentication](/api/authentication) for details.
+
+## Team Object
+
+The team object contains the following fields:
+
+<ResponseField name="id" type="string">
+  Unique identifier for the team
+</ResponseField>
+
+<ResponseField name="name" type="string" required>
+  Team name (must be unique)
+</ResponseField>
+
+<ResponseField name="logo" type="string">
+  URL to the team logo image
+</ResponseField>
+
+<ResponseField name="location" type="string" required>
+  Team's location (e.g., "Karachi, Pakistan")
+</ResponseField>
+
+<ResponseField name="createdBy" type="string" required>
+  Player ID of the team creator
+</ResponseField>
+
+<ResponseField name="captain" type="object">
+  Player object representing the team captain
+  
+  <Expandable title="Captain object">
+    <ResponseField name="id" type="string">
+      Player ID
+    </ResponseField>
+    <ResponseField name="userId" type="string">
+      Associated user ID
+    </ResponseField>
+    <ResponseField name="shortName" type="string">
+      Player's short name
+    </ResponseField>
+    <ResponseField name="battingStyle" type="string">
+      Batting style (e.g., "Right-hand bat", "Left-hand bat")
+    </ResponseField>
+    <ResponseField name="bowlingStyle" type="string">
+      Bowling style (e.g., "Right-arm fast", "Slow left-arm orthodox")
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+<ResponseField name="players" type="array">
+  Array of player objects in the team roster
+  
+  <Expandable title="Player object">
+    <ResponseField name="id" type="string">
+      Player ID
+    </ResponseField>
+    <ResponseField name="userId" type="string">
+      Associated user ID
+    </ResponseField>
+    <ResponseField name="shortName" type="string">
+      Player's short name
+    </ResponseField>
+    <ResponseField name="battingStyle" type="string">
+      Batting style
+    </ResponseField>
+    <ResponseField name="bowlingStyle" type="string">
+      Bowling style
+    </ResponseField>
+    <ResponseField name="isVerified" type="boolean">
+      Whether the player is verified
+    </ResponseField>
+    <ResponseField name="status" type="string">
+      Player status (active, inactive, deleted)
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+<ResponseField name="createdAt" type="string">
+  ISO 8601 timestamp of team creation
+</ResponseField>
+
+<ResponseField name="updatedAt" type="string">
+  ISO 8601 timestamp of last update
+</ResponseField>
+
+## Core Endpoints
+
+### Team Management
+
+- [Create Team](/api/teams/manage#create-team) - Create a new team
+- [Get Teams](/api/teams/manage#get-teams) - List all teams with filters
+- [Get Team](/api/teams/manage#get-team) - Get a specific team by ID
+- [Update Team](/api/teams/manage#update-team) - Update team details
+- [Delete Team](/api/teams/manage#delete-team) - Delete a team
+- [Search Teams](/api/teams/manage#search-teams) - Search teams by query
+- [Check Name Availability](/api/teams/manage#check-name-availability) - Check if team name is available
+
+### Team Roster Management
+
+- [Get Team Players](/api/teams/manage#get-team-players) - Get all players in a team
+- [Add Player to Team](/api/teams/manage#add-player) - Add a player to the team roster
+- [Remove Player from Team](/api/teams/manage#remove-player) - Remove a player from the team
+- [Set Team Captain](/api/teams/manage#set-captain) - Assign a captain to the team
+
+### Team Statistics
+
+- [Get Team Stats](/api/teams/manage#get-team-stats) - Get team statistics including wins, losses, and player stats
+
+## Common Use Cases
+
+### Creating a Team
+
+```bash
+curl -X POST https://api.cricpr.com/v1/teams \
+  -H "Authorization: Bearer YOUR_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "Karachi Kings",
+    "location": "Karachi, Pakistan",
+    "logo": "https://example.com/logo.png",
+    "players": ["player_id_1", "player_id_2"],
+    "captain": "player_id_1"
+  }'
+```
+
+### Getting Team with Players
+
+```bash
+curl https://api.cricpr.com/v1/teams/TEAM_ID
+```
+
+### Managing Team Roster
+
+```bash
+# Add player
+curl -X POST https://api.cricpr.com/v1/teams/TEAM_ID/players/add \
+  -H "Authorization: Bearer YOUR_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"playerId": "player_id"}'
+
+# Set captain
+curl -X POST https://api.cricpr.com/v1/teams/TEAM_ID/captain \
+  -H "Authorization: Bearer YOUR_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"playerId": "player_id"}'
+```
+
+## Pagination
+
+List endpoints support pagination with the following query parameters:
+
+- `page` - Page number (default: 1)
+- `limit` - Items per page (default: 10)
+- `sortBy` - Sort field in format `field:asc` or `field:desc`
+
+## Error Handling
+
+The Teams API uses standard HTTP status codes:
+
+- `200` - Success
+- `201` - Created successfully
+- `204` - Deleted successfully (no content)
+- `400` - Bad request (validation error)
+- `401` - Unauthorized (missing or invalid token)
+- `404` - Team not found
+- `500` - Server error

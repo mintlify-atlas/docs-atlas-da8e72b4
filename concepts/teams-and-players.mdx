@@ -1,0 +1,395 @@
+---
+title: 'Teams and Players'
+description: 'Managing teams, players, and squad composition in Cric PR'
+icon: 'users'
+---
+
+## Overview
+
+Teams and players form the foundation of match and tournament management in Cric PR. The system supports both registered users and guest players, with flexible squad management and role assignments.
+
+## Players
+
+Players represent individual cricketers in the system. They can be either linked to user accounts or exist as guest players.
+
+### Player Schema
+
+```javascript
+{
+  userId: ObjectId,            // Optional - links to User account
+  isGuest: Boolean,            // Guest players don't have accounts
+  
+  // Playing Style
+  battingStyle: String,        // Batting technique
+  bowlingStyle: String,        // Bowling technique
+  playingRole: String,         // Primary role in team
+  
+  // Profile
+  shortName: String,           // Display name
+  isVerified: Boolean,
+  
+  // Status
+  status: String               // 'active' | 'incomplete_profile' | 'deactivated' | 'deleted'
+}
+```
+
+## Player Statuses
+
+<Accordion title="active">
+  Fully registered player with complete profile.
+  
+  **Characteristics:**
+  - Can participate in matches
+  - Profile is public
+  - Linked to user account (if not guest)
+</Accordion>
+
+<Accordion title="incomplete_profile">
+  Player exists but profile needs completion.
+  
+  **Use Case:** User created player profile but hasn't filled in all details.
+  
+  **Behavior:** Treated as active for most operations.
+</Accordion>
+
+<Accordion title="deactivated">
+  Player account temporarily disabled.
+  
+  **Effect:** Cannot participate in new matches but historical data preserved.
+</Accordion>
+
+<Accordion title="deleted">
+  Soft-deleted player record.
+  
+  **Effect:** Excluded from queries but data retained for historical match records.
+</Accordion>
+
+## Batting Styles
+
+The API supports two batting styles:
+
+- `'Left-hand bat'`
+- `'Right-hand bat'`
+- `'none'` (not specified)
+
+## Bowling Styles
+
+Comprehensive bowling style classification:
+
+**Pace Bowling:**
+- `'Right-arm fast'`
+- `'Right-arm medium'`
+- `'Left-arm fast'`
+- `'Left-arm medium'`
+
+**Spin Bowling:**
+- `'Slow left-arm orthodox'`
+- `'Slow left-arm chinaman'`
+- `'Right-arm Off Break'`
+- `'Right-arm Leg Break'`
+
+**Other:**
+- `'none'` (not specified)
+
+## Playing Roles
+
+Players are categorized by their primary role:
+
+- `'Opening batter'`
+- `'Top-order batter'`
+- `'Middle-order batter'`
+- `'Lower-order batter'`
+- `'Wicket-keeper batter'`
+- `'Wicket-keeper'`
+- `'All-rounder'`
+- `'Bowler'`
+- `'none'`
+
+<Tip>
+Playing roles help with team selection and batting order decisions.
+</Tip>
+
+## Teams
+
+Teams are permanent squads with a consistent roster of players.
+
+### Team Schema
+
+```javascript
+{
+  name: String,                // Unique team name
+  logo: String,                // Team logo URL
+  location: String,            // Home city/venue
+  
+  // Squad
+  players: [ObjectId],         // Array of Player references
+  captain: ObjectId,           // Default captain
+  
+  // Management
+  createdBy: ObjectId          // Creator (Player reference)
+}
+```
+
+<Info>
+Team names must be unique across the entire system. The API validates uniqueness at creation and update.
+</Info>
+
+## Team Instances
+
+For each match, teams create a **Team Instance** that represents their specific squad for that game.
+
+### Why Team Instances?
+
+Team instances solve several problems:
+
+1. **Squad Rotation**: Different players in different matches
+2. **Role Changes**: Captain or wicket-keeper may change per match
+3. **Historical Accuracy**: Preserves who actually played in each match
+4. **Guest Players**: Allows one-off players in specific matches
+
+### Team Instance Schema
+
+```javascript
+{
+  teamId: ObjectId,            // Reference to parent Team
+  
+  // Match-Specific Squad
+  players: [ObjectId],         // Playing 11 for this match
+  
+  // Match Roles
+  captainId: ObjectId,         // Captain for this match
+  wicketKeeperId: ObjectId,    // Wicket keeper for this match
+  scorerId: ObjectId           // Scorer for this match
+}
+```
+
+<Note>
+Team instances are created automatically when a match is created. The default captain and full squad are copied from the parent team.
+</Note>
+
+## Player-Team Relationship
+
+```
+User (optional)
+  └─> Player
+       └─> Team (member)
+            └─> Team Instance (for specific match)
+                 └─> Match
+```
+
+### Guest Players
+
+Guest players enable matches without requiring full user registration:
+
+- Set `isGuest: true`
+- No `userId` required
+- Can still have batting/bowling styles and roles
+- Participate in matches normally
+- No login capability
+
+<Accordion title="Creating a Guest Player">
+  ```javascript
+  POST /players
+  {
+    "isGuest": true,
+    "shortName": "John Doe",
+    "battingStyle": "Right-hand bat",
+    "bowlingStyle": "Right-arm fast",
+    "playingRole": "All-rounder"
+  }
+  ```
+  
+  Guest players are useful for:
+  - Pickup games
+  - Trial matches
+  - Temporary replacements
+</Accordion>
+
+## Team Management Operations
+
+### Adding Players to Team
+
+Players are added to a team's permanent squad:
+
+```javascript
+PATCH /teams/:id
+{
+  "players": ["playerId1", "playerId2", "playerId3"]
+}
+```
+
+### Setting Team Captain
+
+```javascript
+PATCH /teams/:id
+{
+  "captain": "playerId"
+}
+```
+
+<Info>
+The captain must be a member of the team's player roster.
+</Info>
+
+## Player Statistics
+
+Player performance is tracked at multiple levels:
+
+### Player Match Stats
+
+Statistics for a single match:
+
+```javascript
+{
+  matchId: ObjectId,
+  playerId: ObjectId,
+  teamInstanceId: ObjectId,
+  
+  battingStatsId: ObjectId,    // Reference to BattingStats
+  bowlingStatsId: ObjectId,    // Reference to BowlingStats
+  fieldingStatsId: ObjectId    // Reference to FieldingStats
+}
+```
+
+### Batting Statistics
+
+```javascript
+{
+  runScored: Number,
+  ballFaced: Number,
+  fours: Number,
+  sixes: Number,
+  strikeRate: Number,
+  dismissalType: String,
+  isOut: Boolean
+}
+```
+
+### Bowling Statistics
+
+```javascript
+{
+  oversBowled: Number,
+  runConceded: Number,
+  wickets: Number,
+  maidens: Number,
+  economy: Number,
+  wides: Number,
+  noBalls: Number
+}
+```
+
+### Fielding Statistics
+
+```javascript
+{
+  catches: Number,
+  runOuts: Number,
+  stumpings: Number
+}
+```
+
+## Player Career Statistics
+
+Aggregate statistics across all matches are calculated on-demand:
+
+- Total runs, wickets, catches
+- Career average and strike rate
+- Best performances
+- Centuries and half-centuries
+- Five-wicket hauls
+
+<Tip>
+Use the `/players/:id/statistics` endpoint to retrieve comprehensive career statistics for a player.
+</Tip>
+
+## Player Verification
+
+The `isVerified` flag indicates official verification status:
+
+- **Verified players**: Confirmed identity (e.g., professional cricketers)
+- **Unverified players**: Standard users
+
+<Note>
+Verification is typically managed by administrators and has no impact on gameplay functionality.
+</Note>
+
+## Team Invitations
+
+Teams can invite players to join their squad:
+
+```javascript
+{
+  teamId: ObjectId,
+  playerId: ObjectId,
+  invitedBy: ObjectId,         // Player who sent invitation
+  status: String,              // 'pending' | 'accepted' | 'rejected'
+  expiresAt: Date
+}
+```
+
+### Invitation Workflow
+
+1. **Send Invitation** → `POST /teams/:id/invitations`
+2. **Player Reviews** → `GET /players/:id/invitations`
+3. **Accept/Reject** → `PATCH /invitations/:id`
+4. **Auto-add to Team** if accepted
+
+## Finding Opponents
+
+The API provides efficient opponent discovery:
+
+```javascript
+GET /teams/:id/opponents
+```
+
+Returns teams that:
+- Have played matches against this team
+- Are in the same tournaments
+- Match specified filters (location, skill level, etc.)
+
+## Player Search
+
+Search for players by:
+
+- Name or short name
+- Batting/bowling style
+- Playing role
+- Location
+- Status (active, incomplete profile, etc.)
+
+```javascript
+GET /players?search=batsman&battingStyle=Right-hand bat&status=active
+```
+
+## Dismissal Types
+
+When a player is dismissed, the following dismissal types are supported:
+
+- `'bowled'` - Bowled out
+- `'caught'` - Caught by fielder
+- `'lbw'` - Leg Before Wicket
+- `'run out'` - Run out
+- `'stumped'` - Stumped by wicket-keeper
+- `'hit wicket'` - Hit wicket
+- `'timed out'` - Timed out
+- `'retired out'` - Retired out
+- `'retired hurt'` - Retired hurt (not counted as dismissal)
+- `'hit the ball twice'` - Hit the ball twice
+- `'obstructing the field'` - Obstructing the field
+- `'mankading'` / `'mankaded'` - Run out at non-striker's end
+
+<Note>
+"Retired hurt" does not count as a dismissal - the player can return to bat later.
+</Note>
+
+## Related Endpoints
+
+See the API Reference for detailed endpoint documentation:
+
+- `POST /players` - Create player
+- `GET /players/:id` - Get player details
+- `POST /teams` - Create team
+- `GET /teams/:id` - Get team details
+- `PATCH /teams/:id/players` - Manage team roster
+- `GET /players/:id/statistics` - Player career statistics

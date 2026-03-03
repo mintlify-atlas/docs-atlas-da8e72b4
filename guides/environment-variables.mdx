@@ -1,0 +1,416 @@
+---
+title: 'Environment Variables'
+description: 'Complete reference for all environment variables in Cric PR Backend API'
+---
+
+## Overview
+
+The Cric PR Backend API uses environment variables for configuration. All variables are defined in the `.env` file and validated using Joi schema.
+
+## Configuration File
+
+Create a `.env` file in the root directory with the following variables:
+
+## Project Configuration
+
+### PROJECT_NAME
+
+<ParamField path="PROJECT_NAME" type="string" default="<Project Name>">
+  Name of your project instance
+  
+  ```env
+  PROJECT_NAME=Cric PR Local Development
+  ```
+</ParamField>
+
+### NODE_ENV
+
+<ParamField path="NODE_ENV" type="string" required>
+  Application environment. Valid values: `production`, `development`, `test`
+  
+  ```env
+  NODE_ENV=development
+  ```
+  
+  <Note>
+    This affects database connections, Redis cluster mode, and logging levels.
+  </Note>
+</ParamField>
+
+### SERVER_URLS
+
+<ParamField path="SERVER_URLS" type="string">
+  Comma-separated list of server URLs for external services
+  
+  ```env
+  SERVER_URLS=https://quickcashgaming.com/cricpr/test/v1
+  ```
+</ParamField>
+
+## Server Ports
+
+### PORT
+
+<ParamField path="PORT" type="number" default="3000">
+  Port number for the main REST API server
+  
+  ```env
+  PORT=3006
+  ```
+</ParamField>
+
+### SOCKET_PORT
+
+<ParamField path="SOCKET_PORT" type="number" default="5002">
+  Port number for the WebSocket server
+  
+  ```env
+  SOCKET_PORT=3001
+  ```
+</ParamField>
+
+## Database Configuration
+
+### MONGODB_URL
+
+<ParamField path="MONGODB_URL" type="string" required>
+  MongoDB connection string. Supports both MongoDB Atlas and local instances.
+  
+  **MongoDB Atlas (Recommended):**
+  ```env
+  MONGODB_URL=mongodb://username:password@cluster-shard-00-00.mongodb.net:27017,cluster-shard-00-01.mongodb.net:27017,cluster-shard-00-02.mongodb.net:27017/?ssl=true&replicaSet=atlas-xxxxx-shard-0&authSource=admin&retryWrites=true&w=majority&appName=Cluster0
+  ```
+  
+  **Local MongoDB:**
+  ```env
+  MONGODB_URL=mongodb://localhost:27017/cricpr
+  ```
+  
+  <Warning>
+    In test environment, the system automatically appends `-test` to the database name.
+  </Warning>
+</ParamField>
+
+## JWT Configuration
+
+All JWT-related settings for authentication tokens.
+
+### JWT_SECRET
+
+<ParamField path="JWT_SECRET" type="string" required>
+  Secret key for signing JWT tokens
+  
+  ```env
+  JWT_SECRET=thisisasamplesecret
+  ```
+  
+  <Warning>
+    Use a strong, random string in production. Never commit real secrets to version control.
+  </Warning>
+</ParamField>
+
+### JWT_ACCESS_EXPIRATION_MINUTES
+
+<ParamField path="JWT_ACCESS_EXPIRATION_MINUTES" type="number" default="30">
+  Number of minutes after which access tokens expire
+  
+  ```env
+  JWT_ACCESS_EXPIRATION_MINUTES=30
+  ```
+</ParamField>
+
+### JWT_REFRESH_EXPIRATION_DAYS
+
+<ParamField path="JWT_REFRESH_EXPIRATION_DAYS" type="number" default="30">
+  Number of days after which refresh tokens expire
+  
+  ```env
+  JWT_REFRESH_EXPIRATION_DAYS=30
+  ```
+</ParamField>
+
+### JWT_RESET_PASSWORD_EXPIRATION_MINUTES
+
+<ParamField path="JWT_RESET_PASSWORD_EXPIRATION_MINUTES" type="number" default="10">
+  Number of minutes after which password reset tokens expire
+  
+  ```env
+  JWT_RESET_PASSWORD_EXPIRATION_MINUTES=10
+  ```
+</ParamField>
+
+### JWT_VERIFY_EMAIL_EXPIRATION_MINUTES
+
+<ParamField path="JWT_VERIFY_EMAIL_EXPIRATION_MINUTES" type="number" default="10">
+  Number of minutes after which email verification tokens expire
+  
+  ```env
+  JWT_VERIFY_EMAIL_EXPIRATION_MINUTES=10
+  ```
+</ParamField>
+
+## Email Configuration (SMTP)
+
+### SMTP_HOST
+
+<ParamField path="SMTP_HOST" type="string">
+  SMTP server hostname that will send emails
+  
+  ```env
+  SMTP_HOST=smtp.hostinger.com
+  ```
+  
+  <Tip>
+    For testing, you can use a fake SMTP service like [Ethereal](https://ethereal.email/create)
+  </Tip>
+</ParamField>
+
+### SMTP_PORT
+
+<ParamField path="SMTP_PORT" type="number">
+  Port to connect to the email server
+  
+  ```env
+  SMTP_PORT=465
+  ```
+  
+  Common ports:
+  - `465` - SSL/TLS
+  - `587` - STARTTLS
+  - `25` - Plain (not recommended)
+</ParamField>
+
+### SMTP_USERNAME
+
+<ParamField path="SMTP_USERNAME" type="string">
+  Username for email server authentication
+  
+  ```env
+  SMTP_USERNAME=your-email@example.com
+  ```
+</ParamField>
+
+### SMTP_PASSWORD
+
+<ParamField path="SMTP_PASSWORD" type="string">
+  Password for email server authentication
+  
+  ```env
+  SMTP_PASSWORD=your-password
+  ```
+  
+  <Warning>
+    Never commit real credentials to version control. Use environment-specific configuration.
+  </Warning>
+</ParamField>
+
+### EMAIL_FROM
+
+<ParamField path="EMAIL_FROM" type="string">
+  The "from" address in emails sent by the application
+  
+  ```env
+  EMAIL_FROM=noreply@example.com
+  ```
+</ParamField>
+
+## Redis Configuration
+
+### REDIS_HOST
+
+<ParamField path="REDIS_HOST" type="string" default="localhost">
+  Redis server hostname
+  
+  ```env
+  REDIS_HOST=localhost
+  ```
+</ParamField>
+
+### REDIS_PORT
+
+<ParamField path="REDIS_PORT" type="number" default="6379">
+  Redis server port
+  
+  ```env
+  REDIS_PORT=6379
+  ```
+</ParamField>
+
+### REDIS_PASSWORD
+
+<ParamField path="REDIS_PASSWORD" type="string">
+  Redis authentication password (leave empty if no password)
+  
+  ```env
+  REDIS_PASSWORD=
+  ```
+</ParamField>
+
+### REDIS_DB
+
+<ParamField path="REDIS_DB" type="number" default="0">
+  Redis database index (0-15)
+  
+  ```env
+  REDIS_DB=0
+  ```
+</ParamField>
+
+### REDIS_TTL
+
+<ParamField path="REDIS_TTL" type="number" default="3600">
+  Default Time-To-Live for cached entries in seconds
+  
+  ```env
+  REDIS_TTL=3600
+  ```
+  
+  Default: 3600 seconds (1 hour)
+</ParamField>
+
+## Payment Integration
+
+### STRIPE_SECRET_KEY
+
+<ParamField path="STRIPE_SECRET_KEY" type="string">
+  Stripe API secret key for payment processing
+  
+  ```env
+  STRIPE_SECRET_KEY=sk_test_xxxxxxxxxx
+  ```
+</ParamField>
+
+### STRIPE_PUBLISHABLE_KEY
+
+<ParamField path="STRIPE_PUBLISHABLE_KEY" type="string">
+  Stripe publishable key for client-side integration
+  
+  ```env
+  STRIPE_PUBLISHABLE_KEY=pk_test_xxxxxxxxxxxx
+  ```
+</ParamField>
+
+## Email Service (Resend)
+
+### RESEND_API_KEY
+
+<ParamField path="RESEND_API_KEY" type="string">
+  API key for Resend email service
+  
+  ```env
+  RESEND_API_KEY=re_xxxxxxxxxx
+  ```
+</ParamField>
+
+## Server Control
+
+### API_SERVER_ENABLE
+
+<ParamField path="API_SERVER_ENABLE" type="boolean" default="true" required>
+  Enable or disable the REST API server
+  
+  ```env
+  API_SERVER_ENABLE=true
+  ```
+</ParamField>
+
+### WS_SERVER_ENABLE
+
+<ParamField path="WS_SERVER_ENABLE" type="boolean" default="false" required>
+  Enable or disable the WebSocket server
+  
+  ```env
+  WS_SERVER_ENABLE=false
+  ```
+</ParamField>
+
+## Complete Example
+
+Here's a complete `.env` file example:
+
+```env
+# Project Configuration
+PROJECT_NAME=Cric PR Local Development
+NODE_ENV=development
+SERVER_URLS=https://quickcashgaming.com/cricpr/test/v1
+
+# Server Ports
+PORT=3006
+SOCKET_PORT=3001
+
+# MongoDB
+MONGODB_URL=mongodb://localhost:27017/cricpr
+
+# JWT Configuration
+JWT_SECRET=your-super-secret-jwt-key
+JWT_ACCESS_EXPIRATION_MINUTES=30
+JWT_REFRESH_EXPIRATION_DAYS=30
+JWT_RESET_PASSWORD_EXPIRATION_MINUTES=10
+JWT_VERIFY_EMAIL_EXPIRATION_MINUTES=10
+
+# SMTP Configuration
+SMTP_HOST=smtp.hostinger.com
+SMTP_PORT=465
+SMTP_USERNAME=your-email@example.com
+SMTP_PASSWORD=your-password
+EMAIL_FROM=noreply@example.com
+
+# Redis Configuration (Optional)
+REDIS_HOST=localhost
+REDIS_PORT=6379
+REDIS_PASSWORD=
+REDIS_DB=0
+REDIS_TTL=3600
+
+# Stripe Payment
+STRIPE_SECRET_KEY=sk_test_xxxxxxxxxx
+STRIPE_PUBLISHABLE_KEY=pk_test_xxxxxxxxxxxx
+
+# Resend Email Service
+RESEND_API_KEY=re_xxxxxxxxxx
+
+# Server Control
+API_SERVER_ENABLE=true
+WS_SERVER_ENABLE=false
+```
+
+## Validation
+
+All environment variables are validated on application startup using Joi schema. If validation fails, the application will throw an error with details about the missing or invalid configuration.
+
+Validation is performed in `src/config/config.js`.
+
+## Security Best Practices
+
+<Warning>
+  **Never commit `.env` files to version control!**
+</Warning>
+
+<Steps>
+  <Step title="Use strong secrets">
+    Generate strong, random strings for `JWT_SECRET` and other sensitive values
+  </Step>
+  
+  <Step title="Different configs per environment">
+    Use different `.env` files for development, staging, and production
+  </Step>
+  
+  <Step title="Restrict access">
+    Limit access to production environment variables to authorized personnel only
+  </Step>
+  
+  <Step title="Rotate secrets regularly">
+    Periodically rotate JWT secrets and API keys
+  </Step>
+</Steps>
+
+## Related Guides
+
+<CardGroup cols={2}>
+  <Card title="Database Setup" icon="database" href="/guides/database-setup">
+    Configure MongoDB connection
+  </Card>
+  <Card title="Redis Caching" icon="bolt" href="/guides/redis-caching">
+    Set up Redis caching
+  </Card>
+</CardGroup>

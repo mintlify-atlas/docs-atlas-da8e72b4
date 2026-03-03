@@ -1,0 +1,528 @@
+---
+title: 'Match Scoring & Status'
+description: 'Start matches, update live scores, and manage match status'
+---
+
+## Start Match
+
+<api>POST /v1/matches/:matchId/start</api>
+
+Start a match by conducting the toss and creating the first innings. This transitions the match from `pending` to `inProgress` status.
+
+### Authentication
+
+Required. Include a Bearer token in the Authorization header.
+
+### Path Parameters
+
+<ParamField path="matchId" type="string" required>
+  Match ID (MongoDB ObjectId)
+</ParamField>
+
+### Request Body
+
+<ParamField path="tossWinnerTeamInstanceId" type="string" required>
+  Team instance ID of the toss winner. Must be either teamAInstanceId or teamBInstanceId from the match.
+</ParamField>
+
+<ParamField path="tossDecision" type="string" required>
+  Toss winner's decision.
+  
+  **Options:**
+  - `bat` - Toss winner chooses to bat first
+  - `bowl` - Toss winner chooses to bowl first
+</ParamField>
+
+### Response
+
+Returns the updated match object with:
+- `status`: Changed to "inProgress"
+- `tossWinnerTeamInstanceId`: The team that won the toss
+- `tossDecision`: Whether they chose to bat or bowl
+- `tossTime`: Timestamp when toss was conducted
+- `firstInningsId`: ID of the newly created first innings
+- `isScheduled`: Set to false (match is no longer scheduled)
+
+### Example
+
+<CodeGroup>
+
+```bash cURL
+curl -X POST https://api.cricpr.com/v1/matches/688cbcf35ceca63a9cd62b6d/start \
+  -H "Authorization: Bearer YOUR_ACCESS_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "tossWinnerTeamInstanceId": "688cbcf15ceca63a9cd62b69",
+    "tossDecision": "bat"
+  }'
+```
+
+```javascript JavaScript
+const response = await fetch(
+  'https://api.cricpr.com/v1/matches/688cbcf35ceca63a9cd62b6d/start',
+  {
+    method: 'POST',
+    headers: {
+      'Authorization': 'Bearer YOUR_ACCESS_TOKEN',
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({
+      tossWinnerTeamInstanceId: '688cbcf15ceca63a9cd62b69',
+      tossDecision: 'bat'
+    })
+  }
+);
+
+const match = await response.json();
+console.log('Match started. First innings ID:', match.firstInningsId);
+```
+
+```python Python
+import requests
+
+url = 'https://api.cricpr.com/v1/matches/688cbcf35ceca63a9cd62b6d/start'
+headers = {
+    'Authorization': 'Bearer YOUR_ACCESS_TOKEN',
+    'Content-Type': 'application/json'
+}
+data = {
+    'tossWinnerTeamInstanceId': '688cbcf15ceca63a9cd62b69',
+    'tossDecision': 'bat'
+}
+
+response = requests.post(url, json=data, headers=headers)
+match = response.json()
+print(f'Match started. First innings ID: {match["firstInningsId"]}')
+```
+
+</CodeGroup>
+
+### Toss Logic
+
+The API automatically determines batting and bowling teams based on the toss:
+
+**If toss winner chooses to bat:**
+- Batting team: Toss winner's team
+- Bowling team: Opposing team
+
+**If toss winner chooses to bowl:**
+- Batting team: Opposing team
+- Bowling team: Toss winner's team
+
+### Test Match Day Handling
+
+For Test matches (`matchType: "test"`), the API automatically:
+- Creates or retrieves the current day record
+- Associates the first innings with Day 1
+- Manages day transitions during the match
+
+---
+
+## End Match
+
+<api>POST /v1/matches/:matchId/end</api>
+
+End a match and finalize the results. This transitions the match from `inProgress` to `completed` status.
+
+### Authentication
+
+Required. Include a Bearer token in the Authorization header.
+
+### Path Parameters
+
+<ParamField path="matchId" type="string" required>
+  Match ID (MongoDB ObjectId)
+</ParamField>
+
+### Response
+
+Returns the updated match object with:
+- `status`: Changed to "completed"
+- `endDateTime`: Timestamp when match was completed
+- All innings and statistics finalized
+
+### Automatic Actions
+
+When a match ends, the system automatically:
+
+1. **Updates tournament points** (if tournament match)
+2. **Invalidates match caches** for fresh data
+3. **Sends notifications** to all players:
+   - Match result (won/lost/tied)
+   - Personalized message for each team
+4. **Calculates player milestones**:
+   - Century (100+ runs)
+   - Half-century (50+ runs)
+   - 30+ runs achievement
+   - Fifer (5+ wickets)
+   - 3-wicket haul
+5. **Determines Player of the Match**:
+   - Based on combined batting and bowling performance
+   - Sends special notification to the winner
+
+### Example
+
+<CodeGroup>
+
+```bash cURL
+curl -X POST https://api.cricpr.com/v1/matches/688cbcf35ceca63a9cd62b6d/end \
+  -H "Authorization: Bearer YOUR_ACCESS_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{}'
+```
+
+```javascript JavaScript
+const response = await fetch(
+  'https://api.cricpr.com/v1/matches/688cbcf35ceca63a9cd62b6d/end',
+  {
+    method: 'POST',
+    headers: {
+      'Authorization': 'Bearer YOUR_ACCESS_TOKEN',
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({})
+  }
+);
+
+const match = await response.json();
+console.log('Match ended:', match.endDateTime);
+```
+
+```python Python
+import requests
+
+url = 'https://api.cricpr.com/v1/matches/688cbcf35ceca63a9cd62b6d/end'
+headers = {
+    'Authorization': 'Bearer YOUR_ACCESS_TOKEN',
+    'Content-Type': 'application/json'
+}
+
+response = requests.post(url, json={}, headers=headers)
+match = response.json()
+print(f'Match ended: {match["endDateTime"]}')
+```
+
+</CodeGroup>
+
+---
+
+## Update Match Status
+
+<api>PATCH /v1/matches/:matchId/status</api>
+
+Manually update the match status. Useful for cancelling, postponing, or resuming matches.
+
+### Authentication
+
+Required. Include a Bearer token in the Authorization header.
+
+### Path Parameters
+
+<ParamField path="matchId" type="string" required>
+  Match ID (MongoDB ObjectId)
+</ParamField>
+
+### Request Body
+
+<ParamField path="status" type="string" required>
+  New match status.
+  
+  **Options:**
+  - `pending` - Match is scheduled but not started
+  - `inProgress` - Match is currently being played
+  - `completed` - Match has finished
+  - `cancelled` - Match has been cancelled
+  - `postponed` - Match has been postponed
+</ParamField>
+
+### Status Transition Rules
+
+**Setting to `completed`:**
+- Automatically sets `endDateTime` to current time
+- Triggers the same actions as [End Match](#end-match)
+- Updates tournament points (if applicable)
+- Sends notifications to all players
+
+**Setting to `inProgress`, `completed`, or `cancelled`:**
+- Sets `isScheduled` to false
+
+**Setting to `pending` or `postponed`:**
+- Recalculates `isScheduled` based on `startdatetime`
+- If `startdatetime` is in the future, `isScheduled` becomes true
+
+### Example
+
+<CodeGroup>
+
+```bash cURL - Cancel Match
+curl -X PATCH https://api.cricpr.com/v1/matches/688cbcf35ceca63a9cd62b6d/status \
+  -H "Authorization: Bearer YOUR_ACCESS_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"status": "cancelled"}'
+```
+
+```bash cURL - Postpone Match
+curl -X PATCH https://api.cricpr.com/v1/matches/688cbcf35ceca63a9cd62b6d/status \
+  -H "Authorization: Bearer YOUR_ACCESS_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"status": "postponed"}'
+```
+
+```javascript JavaScript
+const response = await fetch(
+  'https://api.cricpr.com/v1/matches/688cbcf35ceca63a9cd62b6d/status',
+  {
+    method: 'PATCH',
+    headers: {
+      'Authorization': 'Bearer YOUR_ACCESS_TOKEN',
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({
+      status: 'cancelled'
+    })
+  }
+);
+
+const match = await response.json();
+console.log('Match status updated:', match.status);
+```
+
+</CodeGroup>
+
+---
+
+## Get Current Match Inning
+
+<api>GET /v1/matches/current</api>
+
+Get the current in-progress match and inning for the authenticated scorer. Verifies scorer authorization.
+
+### Authentication
+
+Required. The authenticated user must be a scorer for the batting team.
+
+### Response
+
+<ResponseField name="match" type="object">
+  Current match details
+  
+  <Expandable title="properties">
+    <ResponseField name="id" type="string">
+      Match ID
+    </ResponseField>
+    <ResponseField name="title" type="string">
+      Match title
+    </ResponseField>
+    <ResponseField name="status" type="string">
+      Match status (will be "inProgress")
+    </ResponseField>
+    <ResponseField name="startdatetime" type="string">
+      Match start time (ISO 8601)
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+<ResponseField name="inning" type="object">
+  Current innings details
+  
+  <Expandable title="properties">
+    <ResponseField name="id" type="string">
+      Innings ID
+    </ResponseField>
+    <ResponseField name="battingTeam" type="object">
+      Batting team information with name, logo, and scorerId
+    </ResponseField>
+    <ResponseField name="bowlingTeam" type="object">
+      Bowling team information with name and logo
+    </ResponseField>
+    <ResponseField name="currentScore" type="integer">
+      Current runs scored
+    </ResponseField>
+    <ResponseField name="currentWickets" type="integer">
+      Current wickets fallen
+    </ResponseField>
+    <ResponseField name="oversBowled" type="string">
+      Overs completed (format: "7.4")
+    </ResponseField>
+    <ResponseField name="totalOvers" type="integer">
+      Total overs in the match
+    </ResponseField>
+    <ResponseField name="currentOver" type="object">
+      Current over details (overNumber, bowler, balls, runs)
+    </ResponseField>
+    <ResponseField name="isScorerAuthorized" type="boolean">
+      Whether the authenticated user is authorized to score
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+### Example
+
+```bash cURL
+curl -X GET https://api.cricpr.com/v1/matches/current \
+  -H "Authorization: Bearer YOUR_ACCESS_TOKEN"
+```
+
+<Note>
+  The scorer must be from the batting team. If the scorer is not authorized for the current innings, the API returns a 403 error with `isScorerAuthorized: false`.
+</Note>
+
+---
+
+## Get Match Stats
+
+<api>GET /v1/matches/:matchId/stats</api>
+
+Retrieve comprehensive match statistics including innings and player performance data.
+
+### Path Parameters
+
+<ParamField path="matchId" type="string" required>
+  Match ID (MongoDB ObjectId)
+</ParamField>
+
+### Query Parameters
+
+<ParamField query="forceRefresh" type="boolean" default="false">
+  Force refresh of cached data
+</ParamField>
+
+<ParamField query="skipCache" type="boolean" default="false">
+  Skip cache entirely and fetch fresh data
+</ParamField>
+
+### Response
+
+Returns match details with innings and player statistics arrays.
+
+### Caching
+
+Match statistics are cached for performance:
+- **Completed matches:** Cached for 24 hours
+- **Live matches:** Cached for 5 minutes
+
+### Example
+
+```bash cURL
+curl -X GET https://api.cricpr.com/v1/matches/688cbcf35ceca63a9cd62b6d/stats
+```
+
+---
+
+## Enforce Follow-On (Test Matches)
+
+<api>POST /v1/matches/:matchId/follow-on</api>
+
+Enforce follow-on in a Test match, forcing the opposing team to bat again immediately.
+
+### Authentication
+
+Required.
+
+### Path Parameters
+
+<ParamField path="matchId" type="string" required>
+  Match ID (MongoDB ObjectId). Must be a Test match.
+</ParamField>
+
+### Conditions
+
+Follow-on can only be enforced when:
+- Match type is "test"
+- First innings is completed
+- Lead is sufficient (typically 200+ runs)
+
+### Example
+
+```bash cURL
+curl -X POST https://api.cricpr.com/v1/matches/688cbcf35ceca63a9cd62b6d/follow-on \
+  -H "Authorization: Bearer YOUR_ACCESS_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{}'
+```
+
+---
+
+## Test Match Day Management
+
+For Test matches, the API provides additional endpoints to manage multi-day play:
+
+### Get All Days
+
+<api>GET /v1/matches/:matchId/days</api>
+
+Retrieve all days for a Test match.
+
+### Get Specific Day
+
+<api>GET /v1/matches/:matchId/days/:dayNumber</api>
+
+Retrieve details for a specific day (1-5).
+
+### Start Day
+
+<api>POST /v1/matches/:matchId/days/:dayNumber/start</api>
+
+Start play for a specific day.
+
+### End Day
+
+<api>POST /v1/matches/:matchId/days/:dayNumber/end</api>
+
+End play for a specific day (stumps).
+
+---
+
+## Error Responses
+
+<ResponseField name="400" type="error">
+  Bad Request - Invalid parameters or match state
+  
+  **Common causes:**
+  - Match cannot be started (status is not "pending")
+  - Match cannot be ended (status is not "inProgress")
+  - Invalid toss decision
+  - Toss winner team doesn't belong to match
+</ResponseField>
+
+<ResponseField name="401" type="error">
+  Unauthorized - Invalid or missing authentication token
+</ResponseField>
+
+<ResponseField name="403" type="error">
+  Forbidden - Scorer is not authorized for this innings
+  
+  ```json
+  {
+    "code": 403,
+    "message": "Scorer is not authorized for this innings"
+  }
+  ```
+</ResponseField>
+
+<ResponseField name="404" type="error">
+  Not Found - Match or innings not found
+  
+  **Common causes:**
+  - Match ID doesn't exist
+  - No in-progress match found for current user
+  - No current innings found
+</ResponseField>
+
+---
+
+## Live Scoring Workflow
+
+Here's the typical workflow for scoring a match:
+
+1. **Create match** using [POST /v1/matches](/api/matches/create)
+2. **Register teams** using [POST /v1/matches/:matchId/registerTeam](/api/matches/manage#register-teams)
+3. **Start match** using [POST /v1/matches/:matchId/start](#start-match)
+4. **Get current innings** using [GET /v1/matches/current](#get-current-match-inning)
+5. **Record balls** using [Innings API](/api/innings/scoring)
+6. **End match** using [POST /v1/matches/:matchId/end](#end-match)
+7. **View results** using [GET /v1/matches/:matchId/summary](/api/matches/analytics#get-match-summary)
+
+<Tip>
+  For real-time updates, poll the [Get Current Match Inning](#get-current-match-inning) endpoint every few seconds during active scoring.
+</Tip>

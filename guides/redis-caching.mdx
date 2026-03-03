@@ -1,0 +1,523 @@
+---
+title: 'Redis Caching'
+description: 'Redis caching implementation and usage guide for Cric PR Backend API'
+---
+
+## Overview
+
+The Cric PR Backend API implements Redis caching using the `ioredis` library to improve performance and reduce database load. The caching layer is optional and the application will continue to function without Redis.
+
+## Features
+
+- **Automatic failover** - Application continues without Redis if unavailable
+- **Connection retry** - Exponential backoff retry mechanism
+- **Cluster support** - Production cluster mode for high availability
+- **Key-value caching** - Simple get/set operations with TTL
+- **Hash operations** - Store complex objects efficiently
+- **Pattern deletion** - Bulk delete by key patterns
+- **Statistics** - Monitor cache performance
+
+## Installation
+
+Redis is already included in the project dependencies (`ioredis`):
+
+```json
+"ioredis": "^5.7.0"
+```
+
+## Redis Server Setup
+
+<Tabs>
+  <Tab title="macOS">
+    ```bash
+    # Install Redis using Homebrew
+    brew install redis
+    
+    # Start Redis service
+    brew services start redis
+    
+    # Verify Redis is running
+    redis-cli ping
+    # Should return: PONG
+    ```
+  </Tab>
+  
+  <Tab title="Ubuntu/Debian">
+    ```bash
+    # Install Redis
+    sudo apt update
+    sudo apt install redis-server
+    
+    # Start Redis service
+    sudo systemctl start redis-server
+    sudo systemctl enable redis-server
+    
+    # Verify Redis is running
+    redis-cli ping
+    # Should return: PONG
+    ```
+  </Tab>
+  
+  <Tab title="Docker">
+    ```bash
+    # Run Redis in Docker
+    docker run -d \
+      --name redis \
+      -p 6379:6379 \
+      redis:latest
+    
+    # Verify Redis is running
+    docker exec -it redis redis-cli ping
+    # Should return: PONG
+    ```
+  </Tab>
+  
+  <Tab title="Redis Cloud">
+    1. Sign up at [Redis Cloud](https://redis.com/try-free/)
+    2. Create a new database
+    3. Get connection details (host, port, password)
+    4. Configure in `.env` file
+  </Tab>
+</Tabs>
+
+## Configuration
+
+Configure Redis in your `.env` file:
+
+```env
+# Redis Configuration
+REDIS_HOST=localhost
+REDIS_PORT=6379
+REDIS_PASSWORD=
+REDIS_DB=0
+REDIS_TTL=3600
+```
+
+### Configuration Options
+
+<ParamField path="REDIS_HOST" type="string" default="localhost">
+  Redis server hostname or IP address
+</ParamField>
+
+<ParamField path="REDIS_PORT" type="number" default="6379">
+  Redis server port
+</ParamField>
+
+<ParamField path="REDIS_PASSWORD" type="string">
+  Redis authentication password (leave empty for no authentication)
+</ParamField>
+
+<ParamField path="REDIS_DB" type="number" default="0">
+  Redis database index (0-15)
+</ParamField>
+
+<ParamField path="REDIS_TTL" type="number" default="3600">
+  Default Time-To-Live for cached entries in seconds (default: 1 hour)
+</ParamField>
+
+## Redis Service Implementation
+
+The Redis service is implemented in `src/services/redis.service.js`.
+
+### Key Features
+
+#### Cluster Mode
+
+In production (`NODE_ENV=production`), Redis automatically uses cluster mode for high availability:
+
+```javascript
+this.isClusterMode = config.env === 'production';
+```
+
+#### Connection Retry
+
+Automatic retry with exponential backoff:
+
+- **Max retries**: 5
+- **Initial delay**: 1 second
+- **Backoff**: Exponential (1s, 2s, 4s, 8s, 16s)
+
+#### Graceful Degradation
+
+If Redis is unavailable, operations return gracefully without throwing errors:
+
+```javascript
+if (!this.isRedisConnected()) {
+  logger.warn('Redis not connected, skipping cache operation');
+  return null;
+}
+```
+
+## Usage
+
+Import the Redis service in your code:
+
+```javascript
+const redisService = require('./services/redis.service');
+```
+
+### Initialize Connection
+
+```javascript
+// Connect to Redis
+await redisService.connect();
+
+// Check connection status
+if (redisService.isRedisConnected()) {
+  console.log('Redis is connected');
+}
+```
+
+### Basic Operations
+
+#### Set a Value
+
+```javascript
+// Set with default TTL (from config)
+await redisService.set('user:123', { name: 'John', email: 'john@example.com' });
+
+// Set with custom TTL (in seconds)
+await redisService.set('session:abc', { userId: 123 }, 1800); // 30 minutes
+```
+
+#### Get a Value
+
+```javascript
+const user = await redisService.get('user:123');
+// Returns: { name: 'John', email: 'john@example.com' } or null
+```
+
+#### Delete a Key
+
+```javascript
+const deleted = await redisService.del('user:123');
+// Returns: true if deleted, false otherwise
+```
+
+#### Check if Key Exists
+
+```javascript
+const exists = await redisService.exists('user:123');
+// Returns: true or false
+```
+
+#### Get TTL
+
+```javascript
+const ttl = await redisService.ttl('user:123');
+// Returns: remaining seconds or -1 if key doesn't exist
+```
+
+### Pattern Operations
+
+#### Delete by Pattern
+
+```javascript
+// Delete all user cache keys
+await redisService.delPattern('user:*');
+
+// Delete all match-related keys
+await redisService.delPattern('match:*');
+```
+
+<Warning>
+  Use pattern deletion carefully in production as `KEYS` command can be slow on large datasets.
+</Warning>
+
+### Numeric Operations
+
+#### Increment
+
+```javascript
+// Increment by 1
+await redisService.incr('page:views');
+
+// Increment by custom value
+await redisService.incr('score', 10);
+```
+
+### Hash Operations
+
+Store complex objects as hashes for better memory efficiency:
+
+#### Set Hash Field
+
+```javascript
+await redisService.hset('user:123', 'name', 'John Doe');
+await redisService.hset('user:123', 'email', 'john@example.com');
+```
+
+#### Get Hash Field
+
+```javascript
+const name = await redisService.hget('user:123', 'name');
+// Returns: 'John Doe'
+```
+
+#### Get All Hash Fields
+
+```javascript
+const user = await redisService.hgetall('user:123');
+// Returns: { name: 'John Doe', email: 'john@example.com' }
+```
+
+## Common Caching Patterns
+
+### Cache-Aside Pattern
+
+```javascript
+async function getUser(userId) {
+  // Try to get from cache first
+  const cacheKey = `user:${userId}`;
+  let user = await redisService.get(cacheKey);
+  
+  if (user) {
+    // Cache hit
+    return user;
+  }
+  
+  // Cache miss - fetch from database
+  user = await User.findById(userId);
+  
+  // Store in cache for future requests
+  if (user) {
+    await redisService.set(cacheKey, user, 3600); // 1 hour
+  }
+  
+  return user;
+}
+```
+
+### Cache Invalidation
+
+```javascript
+async function updateUser(userId, data) {
+  // Update database
+  const user = await User.findByIdAndUpdate(userId, data, { new: true });
+  
+  // Invalidate cache
+  await redisService.del(`user:${userId}`);
+  
+  // Or update cache with new data
+  await redisService.set(`user:${userId}`, user, 3600);
+  
+  return user;
+}
+```
+
+### List Caching
+
+```javascript
+async function getMatches(filters) {
+  const cacheKey = `matches:${JSON.stringify(filters)}`;
+  
+  // Check cache
+  let matches = await redisService.get(cacheKey);
+  if (matches) return matches;
+  
+  // Fetch from database
+  matches = await Match.find(filters);
+  
+  // Cache for 5 minutes (live data changes frequently)
+  await redisService.set(cacheKey, matches, 300);
+  
+  return matches;
+}
+```
+
+### Bulk Invalidation
+
+```javascript
+async function invalidateUserCache(userId) {
+  // Delete all user-related cache entries
+  await redisService.delPattern(`user:${userId}:*`);
+  await redisService.del(`user:${userId}`);
+}
+```
+
+## Monitoring and Statistics
+
+### Get Cache Statistics
+
+```javascript
+const stats = await redisService.getStats();
+console.log(stats);
+// Returns:
+// {
+//   connected: true,
+//   memory: "... memory info ...",
+//   keyspace: "... keyspace info ...",
+//   uptime: 12345
+// }
+```
+
+### Connection Status
+
+```javascript
+if (redisService.isRedisConnected()) {
+  console.log('Redis is healthy');
+} else {
+  console.log('Redis is disconnected');
+}
+```
+
+## Graceful Shutdown
+
+```javascript
+// Close Redis connection
+await redisService.disconnect();
+```
+
+## Best Practices
+
+<AccordionGroup>
+  <Accordion title="Use descriptive key names">
+    Follow a consistent naming convention:
+    
+    ```javascript
+    // Good
+    user:123
+    user:123:profile
+    match:456:stats
+    session:abc123
+    
+    // Bad
+    u123
+    data
+    temp
+    ```
+  </Accordion>
+
+  <Accordion title="Set appropriate TTL values">
+    Different data types need different TTLs:
+    
+    - **User sessions**: 30-60 minutes
+    - **User profiles**: 1-24 hours
+    - **Static content**: 24 hours or more
+    - **Live data (matches, scores)**: 1-5 minutes
+    - **API responses**: 5-30 minutes
+  </Accordion>
+
+  <Accordion title="Handle cache failures gracefully">
+    Always fall back to database if cache fails:
+    
+    ```javascript
+    try {
+      const cached = await redisService.get(key);
+      if (cached) return cached;
+    } catch (error) {
+      logger.error('Cache error:', error);
+      // Continue to database
+    }
+    
+    return await fetchFromDatabase();
+    ```
+  </Accordion>
+
+  <Accordion title="Avoid caching large objects">
+    Redis stores data in memory. For large objects:
+    
+    - Cache only necessary fields
+    - Use compression for large strings
+    - Consider pagination for lists
+    - Set lower TTL for large objects
+  </Accordion>
+
+  <Accordion title="Monitor memory usage">
+    ```bash
+    # Check Redis memory usage
+    redis-cli INFO memory
+    
+    # Get total keys
+    redis-cli DBSIZE
+    
+    # Monitor commands in real-time
+    redis-cli MONITOR
+    ```
+  </Accordion>
+</AccordionGroup>
+
+## Troubleshooting
+
+### Redis Not Connecting
+
+**Problem**: Application logs show Redis connection errors
+
+**Solutions**:
+1. Verify Redis is running: `redis-cli ping`
+2. Check host and port in `.env` file
+3. Verify firewall allows port 6379
+4. Check Redis logs: `tail -f /var/log/redis/redis-server.log`
+
+### High Memory Usage
+
+**Problem**: Redis consuming too much memory
+
+**Solutions**:
+1. Set `maxmemory` in Redis config
+2. Enable eviction policy: `maxmemory-policy allkeys-lru`
+3. Lower TTL values
+4. Clear unnecessary keys: `redis-cli FLUSHDB` (development only)
+
+### Slow Performance
+
+**Problem**: Cache operations are slow
+
+**Solutions**:
+1. Avoid `KEYS` command in production (use `SCAN` instead)
+2. Use pipelining for multiple operations
+3. Check network latency to Redis server
+4. Consider Redis Cluster for horizontal scaling
+
+## Production Considerations
+
+### Cluster Mode
+
+In production, the application automatically uses cluster mode:
+
+```javascript
+if (config.env === 'production') {
+  // Uses RedisClusterManager
+  this.clusterManager = new RedisClusterManager();
+}
+```
+
+### Persistence
+
+Configure Redis persistence in `redis.conf`:
+
+```conf
+# RDB snapshots
+save 900 1
+save 300 10
+save 60 10000
+
+# AOF persistence
+appendonly yes
+appendfsync everysec
+```
+
+### Security
+
+```conf
+# Require password
+requirepass your-strong-password
+
+# Bind to specific interface
+bind 127.0.0.1
+
+# Disable dangerous commands
+rename-command FLUSHDB ""
+rename-command FLUSHALL ""
+```
+
+## Related Guides
+
+<CardGroup cols={2}>
+  <Card title="Environment Variables" icon="gear" href="/guides/environment-variables">
+    Configure Redis environment variables
+  </Card>
+  <Card title="Setup Guide" icon="rocket" href="/guides/setup">
+    Complete application setup
+  </Card>
+</CardGroup>

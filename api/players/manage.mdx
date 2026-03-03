@@ -1,0 +1,570 @@
+---
+title: 'Player Management'
+description: 'Create, update, delete, and manage player profiles'
+---
+
+## Create Player
+
+<api-endpoint method="POST" path="/v1/players" authenticated />
+
+Create a new player profile linked to a user account.
+
+### Request Body
+
+<ParamField body="userId" type="string" required>
+  User ID to link to this player profile
+</ParamField>
+
+<ParamField body="shortName" type="string">
+  Player's display name or nickname
+</ParamField>
+
+<ParamField body="battingStyle" type="string">
+  Batting style: `Right-hand bat`, `Left-hand bat`, or `none`
+</ParamField>
+
+<ParamField body="bowlingStyle" type="string">
+  Bowling style (e.g., `Right-arm fast`, `Slow left-arm orthodox`)
+</ParamField>
+
+<ParamField body="playingRole" type="string">
+  Primary role (e.g., "Batsman", "Bowler", "All-rounder", "Wicket-keeper")
+</ParamField>
+
+<ParamField body="isVerified" type="boolean" default="false">
+  Whether the player is verified
+</ParamField>
+
+<ParamField body="status" type="string" default="active">
+  Player status: `active`, `incomplete_profile`, `deactivated`, or `deleted`
+</ParamField>
+
+### Response
+
+Returns the created player object.
+
+<RequestExample>
+```bash cURL
+curl -X POST https://api.cricpr.com/v1/players \
+  -H "Authorization: Bearer YOUR_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "userId": "6887d2f86e607c4c48b33c65",
+    "shortName": "Ahmed K",
+    "battingStyle": "Right-hand bat",
+    "bowlingStyle": "Right-arm fast",
+    "playingRole": "All-rounder"
+  }'
+```
+</RequestExample>
+
+<ResponseExample>
+```json Response
+{
+  "id": "688cb06818c2232abefa254e",
+  "userId": "6887d2f86e607c4c48b33c65",
+  "shortName": "Ahmed K",
+  "battingStyle": "Right-hand bat",
+  "bowlingStyle": "Right-arm fast",
+  "playingRole": "All-rounder",
+  "isGuest": false,
+  "isVerified": false,
+  "status": "active",
+  "createdAt": "2024-01-15T10:30:00Z",
+  "updatedAt": "2024-01-15T10:30:00Z"
+}
+```
+</ResponseExample>
+
+---
+
+## Get Players
+
+<api-endpoint method="GET" path="/v1/players" />
+
+Retrieve a paginated list of players with optional filters.
+
+### Query Parameters
+
+<ParamField query="userId" type="string">
+  Filter by user ID
+</ParamField>
+
+<ParamField query="battingStyle" type="string">
+  Filter by batting style
+</ParamField>
+
+<ParamField query="bowlingStyle" type="string">
+  Filter by bowling style
+</ParamField>
+
+<ParamField query="playingRole" type="string">
+  Filter by primary role
+</ParamField>
+
+<ParamField query="isVerified" type="boolean">
+  Filter by verification status
+</ParamField>
+
+<ParamField query="status" type="string">
+  Filter by player status
+</ParamField>
+
+<ParamField query="shortName" type="string">
+  Filter by short name
+</ParamField>
+
+<ParamField query="statusFilter" type="string" default="not_deleted">
+  Status filter: `active`, `not_deleted`, or `all`
+</ParamField>
+
+<ParamField query="page" type="integer" default="1">
+  Page number for pagination
+</ParamField>
+
+<ParamField query="limit" type="integer" default="10">
+  Number of results per page (max: 100)
+</ParamField>
+
+<ParamField query="sortBy" type="string">
+  Sort field and order (e.g., "shortName:asc", "createdAt:desc")
+</ParamField>
+
+### Response
+
+<ResponseField name="results" type="array">
+  Array of player objects with populated userId
+</ResponseField>
+
+<ResponseField name="page" type="integer">
+  Current page number
+</ResponseField>
+
+<ResponseField name="limit" type="integer">
+  Results per page
+</ResponseField>
+
+<ResponseField name="totalPages" type="integer">
+  Total number of pages
+</ResponseField>
+
+<ResponseField name="totalResults" type="integer">
+  Total number of players matching filters
+</ResponseField>
+
+<RequestExample>
+```bash cURL
+curl "https://api.cricpr.com/v1/players?page=1&limit=20&sortBy=shortName:asc"
+```
+</RequestExample>
+
+<ResponseExample>
+```json Response
+{
+  "results": [
+    {
+      "id": "688cb06818c2232abefa254e",
+      "userId": {
+        "id": "6887d2f86e607c4c48b33c65",
+        "name": "Ahmed Khan",
+        "email": "ahmed@example.com"
+      },
+      "shortName": "Ahmed K",
+      "battingStyle": "Right-hand bat",
+      "bowlingStyle": "Right-arm fast",
+      "playingRole": "All-rounder",
+      "isVerified": true,
+      "status": "active"
+    }
+  ],
+  "page": 1,
+  "limit": 20,
+  "totalPages": 5,
+  "totalResults": 95
+}
+```
+</ResponseExample>
+
+---
+
+## Get Player
+
+<api-endpoint method="GET" path="/v1/players/{playerId}" />
+
+Get a specific player by ID.
+
+### Path Parameters
+
+<ParamField path="playerId" type="string" required>
+  Player ID
+</ParamField>
+
+### Query Parameters
+
+<ParamField query="statusFilter" type="string" default="not_deleted">
+  Status filter: `active`, `not_deleted`, or `all`
+</ParamField>
+
+### Response
+
+Returns a player object with populated userId.
+
+<RequestExample>
+```bash cURL
+curl https://api.cricpr.com/v1/players/688cb06818c2232abefa254e
+```
+</RequestExample>
+
+<ResponseExample>
+```json Response
+{
+  "id": "688cb06818c2232abefa254e",
+  "userId": {
+    "id": "6887d2f86e607c4c48b33c65",
+    "name": "Ahmed Khan",
+    "email": "ahmed@example.com",
+    "profilePicture": "https://example.com/avatar.jpg"
+  },
+  "shortName": "Ahmed K",
+  "battingStyle": "Right-hand bat",
+  "bowlingStyle": "Right-arm fast",
+  "playingRole": "All-rounder",
+  "isGuest": false,
+  "isVerified": true,
+  "status": "active",
+  "createdAt": "2024-01-10T08:00:00Z",
+  "updatedAt": "2024-01-15T10:30:00Z"
+}
+```
+</ResponseExample>
+
+---
+
+## Get Player by User ID
+
+<api-endpoint method="GET" path="/v1/players/user/{userId}" />
+
+Get a player profile by their associated user ID.
+
+### Path Parameters
+
+<ParamField path="userId" type="string" required>
+  User ID
+</ParamField>
+
+### Query Parameters
+
+<ParamField query="statusFilter" type="string" default="not_deleted">
+  Status filter: `active`, `not_deleted`, or `all`
+</ParamField>
+
+### Response
+
+Returns the player object linked to the user.
+
+<RequestExample>
+```bash cURL
+curl https://api.cricpr.com/v1/players/user/6887d2f86e607c4c48b33c65
+```
+</RequestExample>
+
+---
+
+## Update Player
+
+<api-endpoint method="PATCH" path="/v1/players/{playerId}" authenticated />
+
+Update player details. Requires authentication.
+
+### Path Parameters
+
+<ParamField path="playerId" type="string" required>
+  Player ID
+</ParamField>
+
+### Request Body
+
+<ParamField body="userId" type="string">
+  Update associated user ID
+</ParamField>
+
+<ParamField body="shortName" type="string">
+  Update short name
+</ParamField>
+
+<ParamField body="battingStyle" type="string">
+  Update batting style
+</ParamField>
+
+<ParamField body="bowlingStyle" type="string">
+  Update bowling style
+</ParamField>
+
+<ParamField body="playingRole" type="string">
+  Update playing role
+</ParamField>
+
+<ParamField body="isVerified" type="boolean">
+  Update verification status
+</ParamField>
+
+<ParamField body="status" type="string">
+  Update player status
+</ParamField>
+
+### Response
+
+Returns the updated player object.
+
+<RequestExample>
+```bash cURL
+curl -X PATCH https://api.cricpr.com/v1/players/688cb06818c2232abefa254e \
+  -H "Authorization: Bearer YOUR_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "shortName": "A. Khan",
+    "playingRole": "Batsman"
+  }'
+```
+</RequestExample>
+
+---
+
+## Update Player Profile
+
+<api-endpoint method="PATCH" path="/v1/players/{playerId}/profile" authenticated />
+
+Update player profile fields (limited subset for player self-service).
+
+### Path Parameters
+
+<ParamField path="playerId" type="string" required>
+  Player ID
+</ParamField>
+
+### Request Body
+
+<ParamField body="shortName" type="string">
+  Update short name
+</ParamField>
+
+<ParamField body="battingStyle" type="string">
+  Update batting style
+</ParamField>
+
+<ParamField body="bowlingStyle" type="string">
+  Update bowling style
+</ParamField>
+
+<ParamField body="playingRole" type="string">
+  Update playing role
+</ParamField>
+
+### Response
+
+Returns the updated player object.
+
+<RequestExample>
+```bash cURL
+curl -X PATCH https://api.cricpr.com/v1/players/688cb06818c2232abefa254e/profile \
+  -H "Authorization: Bearer YOUR_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "shortName": "Ahmed Khan",
+    "battingStyle": "Left-hand bat",
+    "bowlingStyle": "Right-arm medium",
+    "playingRole": "All-rounder"
+  }'
+```
+</RequestExample>
+
+---
+
+## Verify Player
+
+<api-endpoint method="POST" path="/v1/players/{playerId}/verify" authenticated />
+
+Mark a player as verified. Requires admin authentication.
+
+### Path Parameters
+
+<ParamField path="playerId" type="string" required>
+  Player ID
+</ParamField>
+
+### Response
+
+Returns the updated player object with `isVerified: true`.
+
+<RequestExample>
+```bash cURL
+curl -X POST https://api.cricpr.com/v1/players/688cb06818c2232abefa254e/verify \
+  -H "Authorization: Bearer YOUR_TOKEN"
+```
+</RequestExample>
+
+<ResponseExample>
+```json Response
+{
+  "id": "688cb06818c2232abefa254e",
+  "userId": "6887d2f86e607c4c48b33c65",
+  "shortName": "Ahmed K",
+  "isVerified": true,
+  "status": "active"
+}
+```
+</ResponseExample>
+
+---
+
+## Delete Player
+
+<api-endpoint method="DELETE" path="/v1/players/{playerId}" authenticated />
+
+Soft delete a player (sets status to 'deleted'). Requires authentication.
+
+### Path Parameters
+
+<ParamField path="playerId" type="string" required>
+  Player ID
+</ParamField>
+
+### Response
+
+Returns `204 No Content` on success.
+
+<RequestExample>
+```bash cURL
+curl -X DELETE https://api.cricpr.com/v1/players/688cb06818c2232abefa254e \
+  -H "Authorization: Bearer YOUR_TOKEN"
+```
+</RequestExample>
+
+---
+
+## Search Players
+
+<api-endpoint method="GET" path="/v1/players/search" />
+
+Search players by name, email, phone, or cricket attributes.
+
+### Query Parameters
+
+<ParamField query="query" type="string">
+  Search query (searches name, email, phone, shortName, role, battingStyle, bowlingStyle)
+</ParamField>
+
+<ParamField query="phone" type="string">
+  Exact phone number search (returns single player)
+</ParamField>
+
+<ParamField query="statusFilter" type="string" default="not_deleted">
+  Status filter: `active`, `not_deleted`, or `all`
+</ParamField>
+
+<ParamField query="limit" type="integer" default="20">
+  Number of results (1-100)
+</ParamField>
+
+<ParamField query="page" type="integer" default="1">
+  Page number for pagination
+</ParamField>
+
+### Response
+
+#### General Search Response
+
+<ResponseField name="players" type="array">
+  Array of matching player objects
+</ResponseField>
+
+<ResponseField name="pagination" type="object">
+  Pagination metadata
+  
+  <Expandable title="Pagination object">
+    <ResponseField name="currentPage" type="integer">
+      Current page number
+    </ResponseField>
+    <ResponseField name="totalPages" type="integer">
+      Total number of pages
+    </ResponseField>
+    <ResponseField name="totalPlayers" type="integer">
+      Total matching players
+    </ResponseField>
+    <ResponseField name="hasNextPage" type="boolean">
+      Whether there is a next page
+    </ResponseField>
+    <ResponseField name="hasPrevPage" type="boolean">
+      Whether there is a previous page
+    </ResponseField>
+    <ResponseField name="limit" type="integer">
+      Results per page
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+<ResponseField name="searchQuery" type="string">
+  The search query used
+</ResponseField>
+
+#### Phone Search Response
+
+When using `phone` parameter, returns a single player object:
+
+<ResponseField name="id" type="string">
+  Player ID
+</ResponseField>
+
+<ResponseField name="shortName" type="string">
+  Player short name
+</ResponseField>
+
+<ResponseField name="name" type="string">
+  Player full name from user profile
+</ResponseField>
+
+<RequestExample>
+```bash General Search
+curl "https://api.cricpr.com/v1/players/search?query=ahmed&limit=10"
+```
+
+```bash Phone Search
+curl "https://api.cricpr.com/v1/players/search?phone=%2B923001234567"
+```
+</RequestExample>
+
+<ResponseExample>
+```json General Search Response
+{
+  "players": [
+    {
+      "id": "688cb06818c2232abefa254e",
+      "userId": {
+        "id": "6887d2f86e607c4c48b33c65",
+        "name": "Ahmed Khan"
+      },
+      "shortName": "Ahmed K",
+      "battingStyle": "Right-hand bat",
+      "status": "active"
+    }
+  ],
+  "pagination": {
+    "currentPage": 1,
+    "totalPages": 1,
+    "totalPlayers": 1,
+    "hasNextPage": false,
+    "hasPrevPage": false,
+    "limit": 10
+  },
+  "searchQuery": "ahmed"
+}
+```
+
+```json Phone Search Response
+{
+  "id": "688cb06818c2232abefa254e",
+  "shortName": "Ahmed K",
+  "name": "Ahmed Khan"
+}
+```
+</ResponseExample>

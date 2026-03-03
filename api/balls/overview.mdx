@@ -1,0 +1,639 @@
+---
+title: 'Ball-by-Ball Scoring'
+description: 'Record every delivery with comprehensive ball data including runs, wickets, extras, and field positions'
+icon: 'baseball'
+---
+
+## Overview
+
+The Ball API provides granular ball-by-ball scoring for cricket matches. Each ball represents a single delivery from the bowler to the batsman, capturing runs, wickets, extras, and detailed metadata like direction, angle, and distance.
+
+### Relationship Hierarchy
+
+```
+Over
+  └── Ball (individual delivery)
+```
+
+<Info>
+  Ball-by-ball data forms the foundation of all cricket statistics. Accurate ball recording ensures correct scores, player statistics, and match analysis.
+</Info>
+
+## Core Endpoints
+
+### Record Ball
+
+Record a new ball delivery with all relevant details.
+
+```bash
+POST /api/v1/balls/record
+```
+
+<ParamField body="overId" type="string" required>
+  MongoDB ObjectId of the over this ball belongs to.
+</ParamField>
+
+<ParamField body="batsmanId" type="string" required>
+  MongoDB ObjectId of the batsman facing the delivery (striker).
+</ParamField>
+
+<ParamField body="nonStrikerId" type="string" required>
+  MongoDB ObjectId of the batsman at the non-striker's end.
+</ParamField>
+
+<ParamField body="bowlerId" type="string" required>
+  MongoDB ObjectId of the bowler delivering the ball.
+</ParamField>
+
+<ParamField body="ballId" type="string">
+  Unique identifier for the ball delivery. Used for idempotency.
+</ParamField>
+
+<ParamField body="runScored" type="number" default="0">
+  Number of runs scored off this ball (0-6 typically, can be higher with overthrows).
+</ParamField>
+
+<ParamField body="isFour" type="boolean" default="false">
+  Whether this ball resulted in a boundary (4 runs).
+</ParamField>
+
+<ParamField body="isSix" type="boolean" default="false">
+  Whether this ball resulted in a six (6 runs over the boundary).
+</ParamField>
+
+<ParamField body="extras" type="number" default="0">
+  Number of extra runs awarded (wides, no-balls, byes, leg-byes).
+</ParamField>
+
+<ParamField body="extraType" type="string" default="null">
+  Type of extra runs awarded.
+  
+  Options: `noBall`, `wide`, `bye`, `legBye`, `null`
+</ParamField>
+
+<ParamField body="isNoBall" type="boolean" default="false">
+  Whether this delivery was a no-ball (illegal delivery).
+</ParamField>
+
+<ParamField body="isLegalDelivery" type="boolean" default="true">
+  Whether this was a legal delivery that counts towards the over. Wide balls and no-balls are typically illegal.
+</ParamField>
+
+<ParamField body="wicketPlayerOut" type="string">
+  MongoDB ObjectId of the player who got out on this ball (if a wicket fell).
+</ParamField>
+
+<ParamField body="nextBatsmanId" type="string">
+  MongoDB ObjectId of the batsman coming in after a wicket falls.
+</ParamField>
+
+<ParamField body="outType" type="string">
+  Type of dismissal if a wicket fell.
+  
+  Options: `wicket`, `retired`, `timed out`
+</ParamField>
+
+<ParamField body="dismissalType" type="string">
+  Specific method of dismissal.
+  
+  Options: `lbw`, `bowled`, `caught`, `run out`, `stumped`, `timed out`, `hit wicket`, `retired out`, `retired hurt`, `hit the ball twice`, `obstructing the field`, `none`
+</ParamField>
+
+<ParamField body="fielderId" type="string">
+  MongoDB ObjectId of the fielder involved in the dismissal (for caught, run out, etc.).
+</ParamField>
+
+<ParamField body="isFreeHit" type="boolean" default="false">
+  Whether this ball is a free hit (no dismissal except run out allowed). Free hits follow no-balls.
+</ParamField>
+
+<ParamField body="direction" type="string">
+  Direction where the ball was hit on the field.
+  
+  Options: `Long Off`, `Long On`, `Deep Mid Wicket`, `Deep Square Leg`, `Deep Fine Leg`, `Deep Point`, `Deep Cover`, `Third Man`
+</ParamField>
+
+<ParamField body="angle" type="number">
+  Angle of the ball trajectory in degrees (0-360).
+</ParamField>
+
+<ParamField body="distance" type="number">
+  Distance the ball traveled in meters.
+</ParamField>
+
+## Ball Type Examples
+
+### Standard Run Scoring
+
+<Tabs>
+  <Tab title="Dot Ball (No Run)">
+    ```json
+    {
+      "overId": "507f1f77bcf86cd799439020",
+      "batsmanId": "507f1f77bcf86cd799439013",
+      "nonStrikerId": "507f1f77bcf86cd799439014",
+      "bowlerId": "507f1f77bcf86cd799439012",
+      "runScored": 0,
+      "isLegalDelivery": true
+    }
+    ```
+  </Tab>
+  
+  <Tab title="Single Run">
+    ```json
+    {
+      "overId": "507f1f77bcf86cd799439020",
+      "batsmanId": "507f1f77bcf86cd799439013",
+      "nonStrikerId": "507f1f77bcf86cd799439014",
+      "bowlerId": "507f1f77bcf86cd799439012",
+      "runScored": 1,
+      "isLegalDelivery": true
+    }
+    ```
+  </Tab>
+  
+  <Tab title="Boundary (Four)">
+    ```json
+    {
+      "overId": "507f1f77bcf86cd799439020",
+      "batsmanId": "507f1f77bcf86cd799439013",
+      "nonStrikerId": "507f1f77bcf86cd799439014",
+      "bowlerId": "507f1f77bcf86cd799439012",
+      "runScored": 4,
+      "isFour": true,
+      "isLegalDelivery": true,
+      "direction": "Deep Cover",
+      "angle": 45.5,
+      "distance": 65.2
+    }
+    ```
+  </Tab>
+  
+  <Tab title="Six">
+    ```json
+    {
+      "overId": "507f1f77bcf86cd799439020",
+      "batsmanId": "507f1f77bcf86cd799439013",
+      "nonStrikerId": "507f1f77bcf86cd799439014",
+      "bowlerId": "507f1f77bcf86cd799439012",
+      "runScored": 6,
+      "isSix": true,
+      "isLegalDelivery": true,
+      "direction": "Long On",
+      "angle": 117.8,
+      "distance": 99.0
+    }
+    ```
+  </Tab>
+</Tabs>
+
+### Extras
+
+<Tabs>
+  <Tab title="Wide Ball">
+    ```json
+    {
+      "overId": "507f1f77bcf86cd799439020",
+      "batsmanId": "507f1f77bcf86cd799439013",
+      "nonStrikerId": "507f1f77bcf86cd799439014",
+      "bowlerId": "507f1f77bcf86cd799439012",
+      "runScored": 0,
+      "extras": 1,
+      "extraType": "wide",
+      "isLegalDelivery": false
+    }
+    ```
+    <Info>Wide balls add 1 run to the team total and require a re-delivery. They don't count as legal deliveries.</Info>
+  </Tab>
+  
+  <Tab title="No Ball">
+    ```json
+    {
+      "overId": "507f1f77bcf86cd799439020",
+      "batsmanId": "507f1f77bcf86cd799439013",
+      "nonStrikerId": "507f1f77bcf86cd799439014",
+      "bowlerId": "507f1f77bcf86cd799439012",
+      "runScored": 1,
+      "extras": 1,
+      "extraType": "noBall",
+      "isNoBall": true,
+      "isLegalDelivery": false
+    }
+    ```
+    <Warning>No-balls add 1 extra run, require re-delivery, and the next ball is a free hit in limited-overs formats.</Warning>
+  </Tab>
+  
+  <Tab title="Bye">
+    ```json
+    {
+      "overId": "507f1f77bcf86cd799439020",
+      "batsmanId": "507f1f77bcf86cd799439013",
+      "nonStrikerId": "507f1f77bcf86cd799439014",
+      "bowlerId": "507f1f77bcf86cd799439012",
+      "runScored": 0,
+      "extras": 4,
+      "extraType": "bye",
+      "isLegalDelivery": true
+    }
+    ```
+    <Info>Byes are runs scored when the ball misses the batsman and wicket keeper. They count as legal deliveries and add to the team total but not the batsman's score.</Info>
+  </Tab>
+  
+  <Tab title="Leg Bye">
+    ```json
+    {
+      "overId": "507f1f77bcf86cd799439020",
+      "batsmanId": "507f1f77bcf86cd799439013",
+      "nonStrikerId": "507f1f77bcf86cd799439014",
+      "bowlerId": "507f1f77bcf86cd799439012",
+      "runScored": 0,
+      "extras": 2,
+      "extraType": "legBye",
+      "isLegalDelivery": true
+    }
+    ```
+    <Info>Leg byes are runs scored when the ball hits the batsman's body (not bat) and they run. Counts as legal delivery.</Info>
+  </Tab>
+</Tabs>
+
+### Wickets
+
+<Tabs>
+  <Tab title="Bowled">
+    ```json
+    {
+      "overId": "507f1f77bcf86cd799439020",
+      "batsmanId": "507f1f77bcf86cd799439013",
+      "nonStrikerId": "507f1f77bcf86cd799439014",
+      "bowlerId": "507f1f77bcf86cd799439012",
+      "runScored": 0,
+      "isLegalDelivery": true,
+      "wicketPlayerOut": "507f1f77bcf86cd799439013",
+      "nextBatsmanId": "507f1f77bcf86cd799439015",
+      "outType": "wicket",
+      "dismissalType": "bowled"
+    }
+    ```
+  </Tab>
+  
+  <Tab title="Caught">
+    ```json
+    {
+      "overId": "507f1f77bcf86cd799439020",
+      "batsmanId": "507f1f77bcf86cd799439013",
+      "nonStrikerId": "507f1f77bcf86cd799439014",
+      "bowlerId": "507f1f77bcf86cd799439012",
+      "runScored": 0,
+      "isLegalDelivery": true,
+      "wicketPlayerOut": "507f1f77bcf86cd799439013",
+      "nextBatsmanId": "507f1f77bcf86cd799439015",
+      "outType": "wicket",
+      "dismissalType": "caught",
+      "fielderId": "507f1f77bcf86cd799439016"
+    }
+    ```
+  </Tab>
+  
+  <Tab title="LBW (Leg Before Wicket)">
+    ```json
+    {
+      "overId": "507f1f77bcf86cd799439020",
+      "batsmanId": "507f1f77bcf86cd799439013",
+      "nonStrikerId": "507f1f77bcf86cd799439014",
+      "bowlerId": "507f1f77bcf86cd799439012",
+      "runScored": 0,
+      "isLegalDelivery": true,
+      "wicketPlayerOut": "507f1f77bcf86cd799439013",
+      "nextBatsmanId": "507f1f77bcf86cd799439015",
+      "outType": "wicket",
+      "dismissalType": "lbw"
+    }
+    ```
+  </Tab>
+  
+  <Tab title="Run Out">
+    ```json
+    {
+      "overId": "507f1f77bcf86cd799439020",
+      "batsmanId": "507f1f77bcf86cd799439013",
+      "nonStrikerId": "507f1f77bcf86cd799439014",
+      "bowlerId": "507f1f77bcf86cd799439012",
+      "runScored": 1,
+      "isLegalDelivery": true,
+      "wicketPlayerOut": "507f1f77bcf86cd799439014",
+      "nextBatsmanId": "507f1f77bcf86cd799439015",
+      "outType": "wicket",
+      "dismissalType": "run out",
+      "fielderId": "507f1f77bcf86cd799439016"
+    }
+    ```
+    <Note>Run outs can dismiss either batsman, not just the striker.</Note>
+  </Tab>
+  
+  <Tab title="Stumped">
+    ```json
+    {
+      "overId": "507f1f77bcf86cd799439020",
+      "batsmanId": "507f1f77bcf86cd799439013",
+      "nonStrikerId": "507f1f77bcf86cd799439014",
+      "bowlerId": "507f1f77bcf86cd799439012",
+      "runScored": 0,
+      "isLegalDelivery": true,
+      "wicketPlayerOut": "507f1f77bcf86cd799439013",
+      "nextBatsmanId": "507f1f77bcf86cd799439015",
+      "outType": "wicket",
+      "dismissalType": "stumped",
+      "fielderId": "507f1f77bcf86cd799439017"
+    }
+    ```
+    <Info>The fielder ID for stumpings is typically the wicket keeper.</Info>
+  </Tab>
+</Tabs>
+
+### Special Scenarios
+
+<Tabs>
+  <Tab title="Free Hit">
+    ```json
+    {
+      "overId": "507f1f77bcf86cd799439020",
+      "batsmanId": "507f1f77bcf86cd799439013",
+      "nonStrikerId": "507f1f77bcf86cd799439014",
+      "bowlerId": "507f1f77bcf86cd799439012",
+      "runScored": 6,
+      "isSix": true,
+      "isLegalDelivery": true,
+      "isFreeHit": true
+    }
+    ```
+    <Tip>On a free hit, the batsman cannot be dismissed except by run out. This occurs after a no-ball in limited-overs cricket.</Tip>
+  </Tab>
+  
+  <Tab title="Wide + Runs">
+    ```json
+    {
+      "overId": "507f1f77bcf86cd799439020",
+      "batsmanId": "507f1f77bcf86cd799439013",
+      "nonStrikerId": "507f1f77bcf86cd799439014",
+      "bowlerId": "507f1f77bcf86cd799439012",
+      "runScored": 2,
+      "extras": 3,
+      "extraType": "wide",
+      "isLegalDelivery": false
+    }
+    ```
+    <Info>Wide ball (1 extra) plus 2 runs scored by the batsmen. Total: 3 extras to the team.</Info>
+  </Tab>
+  
+  <Tab title="No Ball + Four">
+    ```json
+    {
+      "overId": "507f1f77bcf86cd799439020",
+      "batsmanId": "507f1f77bcf86cd799439013",
+      "nonStrikerId": "507f1f77bcf86cd799439014",
+      "bowlerId": "507f1f77bcf86cd799439012",
+      "runScored": 4,
+      "isFour": true,
+      "extras": 1,
+      "extraType": "noBall",
+      "isNoBall": true,
+      "isLegalDelivery": false
+    }
+    ```
+    <Note>Team gets 5 runs total (1 no-ball + 4 runs). Batsman's score increases by 4. Next ball is a free hit.</Note>
+  </Tab>
+</Tabs>
+
+## Ball Management
+
+### Update Ball
+
+Update an existing ball record (for corrections).
+
+```bash
+PUT /api/v1/balls/update/{id}
+```
+
+Accepts the same parameters as record ball. Use this to correct scoring errors.
+
+<Warning>
+  Updating a ball recalculates all dependent statistics including over totals, innings score, and player statistics.
+</Warning>
+
+### Undo Ball
+
+Remove a ball record and revert statistics.
+
+```bash
+DELETE /api/v1/balls/undo/{id}
+```
+
+<CodeGroup>
+
+```bash cURL
+curl -X DELETE https://api.example.com/api/v1/balls/undo/507f1f77bcf86cd799439030 \
+  -H "Authorization: Bearer YOUR_TOKEN"
+```
+
+```javascript JavaScript
+const response = await fetch(
+  'https://api.example.com/api/v1/balls/undo/507f1f77bcf86cd799439030',
+  {
+    method: 'DELETE',
+    headers: {
+      'Authorization': 'Bearer YOUR_TOKEN'
+    }
+  }
+);
+
+const result = await response.json();
+```
+
+</CodeGroup>
+
+### Get Balls by Over
+
+Retrieve all balls for a specific over.
+
+```bash
+GET /api/v1/balls/over/{overId}
+```
+
+### Get Balls by Match
+
+Retrieve all balls for an entire match.
+
+```bash
+GET /api/v1/balls/match/{matchId}
+```
+
+## Response Examples
+
+<Tabs>
+  <Tab title="Record Ball">
+    ```json
+    {
+      "status": "success",
+      "data": {
+        "_id": "507f1f77bcf86cd799439030",
+        "overId": "507f1f77bcf86cd799439020",
+        "batsmanId": "507f1f77bcf86cd799439013",
+        "nonStrikerId": "507f1f77bcf86cd799439014",
+        "bowlerId": "507f1f77bcf86cd799439012",
+        "ballNumber": 1,
+        "runScored": 4,
+        "isFour": true,
+        "isSix": false,
+        "extras": 0,
+        "extraType": null,
+        "isNoBall": false,
+        "isLegalDelivery": true,
+        "wicketPlayerOut": null,
+        "isFreeHit": false,
+        "direction": "Deep Cover",
+        "angle": 45.5,
+        "distance": 65.2,
+        "meta": {
+          "ballId": "unique-ball-id-123"
+        },
+        "createdAt": "2024-03-03T12:00:00.000Z",
+        "updatedAt": "2024-03-03T12:00:00.000Z"
+      }
+    }
+    ```
+  </Tab>
+  
+  <Tab title="Get Balls by Over">
+    ```json
+    {
+      "status": "success",
+      "data": [
+        {
+          "_id": "507f1f77bcf86cd799439030",
+          "ballNumber": 1,
+          "runScored": 4,
+          "isFour": true
+        },
+        {
+          "_id": "507f1f77bcf86cd799439031",
+          "ballNumber": 2,
+          "runScored": 0,
+          "isFour": false
+        },
+        {
+          "_id": "507f1f77bcf86cd799439032",
+          "ballNumber": 3,
+          "runScored": 1,
+          "isFour": false
+        }
+      ]
+    }
+    ```
+  </Tab>
+</Tabs>
+
+## Advanced Features
+
+### Ball Trajectory Tracking
+
+The API supports detailed ball trajectory data for analytics:
+
+- **Direction**: Field position where ball landed
+- **Angle**: Trajectory angle in degrees
+- **Distance**: Distance traveled in meters
+
+This data powers wagon wheels, heat maps, and shot analysis.
+
+### Idempotency
+
+Use the `ballId` field in the meta object to prevent duplicate ball recording:
+
+```json
+{
+  "ballId": "unique-identifier",
+  "meta": {
+    "ballId": "unique-identifier"
+  }
+}
+```
+
+If a ball with the same `ballId` already exists, the API returns the existing ball instead of creating a duplicate.
+
+## Best Practices
+
+<Steps>
+  <Step title="Validate before recording">
+    Ensure the over exists and is active before recording balls. Start an over first if needed.
+  </Step>
+  
+  <Step title="Set legal delivery correctly">
+    Mark wides and no-balls as `isLegalDelivery: false`. This ensures accurate over completion tracking.
+  </Step>
+  
+  <Step title="Handle free hits">
+    After a no-ball, set `isFreeHit: true` for the next ball. On free hits, only run outs are valid dismissals.
+  </Step>
+  
+  <Step title="Include trajectory data">
+    For boundaries and significant shots, include direction, angle, and distance for richer analytics.
+  </Step>
+  
+  <Step title="Use idempotency">
+    Always include a unique `ballId` to prevent accidental duplicate recordings in case of network retries.
+  </Step>
+</Steps>
+
+## Cricket Scoring Rules
+
+<AccordionGroup>
+  <Accordion title="Run attribution">
+    Runs scored off the bat are credited to the batsman. Byes and leg-byes are not credited to the batsman but count towards the team total. All extras count towards the team total.
+  </Accordion>
+  
+  <Accordion title="Strike rotation">
+    The strike rotates to the non-striker when an odd number of runs (1, 3, 5) is scored. After a boundary (4 or 6), the strike remains with the batsman.
+  </Accordion>
+  
+  <Accordion title="Over completion">
+    An over is complete after 6 legal deliveries. Wides and no-balls don't count towards this total and require re-delivery.
+  </Accordion>
+  
+  <Accordion title="Free hit rules">
+    After a no-ball (front foot or height), the next legal delivery is a free hit. The batsman cannot be dismissed except by run out. If the free hit is another no-ball or wide, the free hit continues.
+  </Accordion>
+  
+  <Accordion title="Wicket limitations">
+    Maximum 10 wickets can fall per innings (11 players - 1 always remains not out). After 10 wickets or completion of allocated overs, the innings ends.
+  </Accordion>
+</AccordionGroup>
+
+## Error Handling
+
+Common validation errors:
+
+- **Invalid over**: Over doesn't exist or is already completed
+- **Duplicate ball**: Ball with same `ballId` already exists
+- **Invalid player**: Batsman, bowler, or fielder not part of the match
+- **Conflicting data**: e.g., `isFour: true` but `runScored: 6`
+- **Free hit violation**: Attempting non-run-out dismissal on free hit
+- **Over already complete**: Attempting to add more than 6 legal deliveries
+
+## Related Resources
+
+<CardGroup cols={2}>
+  <Card title="Over Management" icon="circle-dot" href="/api/overs/overview">
+    Manage the parent over structure.
+  </Card>
+  
+  <Card title="Innings Management" icon="cricket-bat-ball" href="/api/innings/overview">
+    Understand the innings lifecycle.
+  </Card>
+  
+  <Card title="Player Statistics" icon="chart-line" href="/api/players/statistics">
+    View how ball data aggregates into player stats.
+  </Card>
+  
+  <Card title="Real-time Scoring" icon="signal-stream" href="/concepts/real-time-updates">
+    Implement live ball-by-ball updates with WebSockets.
+  </Card>
+</CardGroup>

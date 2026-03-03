@@ -1,0 +1,526 @@
+---
+title: 'Manage Matches'
+description: 'Retrieve, update, and delete cricket matches'
+---
+
+## Get All Matches
+
+<api>GET /v1/matches</api>
+
+Retrieve a paginated list of matches with optional filtering.
+
+### Authentication
+
+Required. Include a Bearer token in the Authorization header.
+
+### Query Parameters
+
+<ParamField query="status" type="string">
+  Filter by match status or outcome.
+  
+  **Options:**
+  - `inProgress` - Currently active matches
+  - `completed` - Finished matches
+  - `played` - All matches the user has played
+  - `won` - Matches won by user's team
+  - `loss` - Matches lost by user's team
+  - `tied` - Tied matches
+  - `scoring` - Matches where user is the scorer
+</ParamField>
+
+<ParamField query="mymatches" type="boolean">
+  If true, return only matches involving the authenticated user.
+</ParamField>
+
+<ParamField query="playerId" type="string">
+  Filter matches by specific player ID.
+</ParamField>
+
+<ParamField query="liveMatches" type="boolean">
+  If true, return only matches currently in progress.
+</ParamField>
+
+<ParamField query="scheduled" type="boolean" default="false">
+  If true, return only scheduled future matches.
+</ParamField>
+
+<ParamField query="page" type="integer" default="1">
+  Page number for pagination (minimum: 1).
+</ParamField>
+
+<ParamField query="limit" type="integer" default="10">
+  Number of results per page (minimum: 1, maximum: 100).
+</ParamField>
+
+### Response
+
+<ResponseField name="results" type="array">
+  Array of match objects with innings data
+</ResponseField>
+
+<ResponseField name="page" type="integer">
+  Current page number
+</ResponseField>
+
+<ResponseField name="limit" type="integer">
+  Results per page
+</ResponseField>
+
+<ResponseField name="totalPages" type="integer">
+  Total number of pages
+</ResponseField>
+
+<ResponseField name="totalResults" type="integer">
+  Total number of matches matching the filter
+</ResponseField>
+
+### Example
+
+```bash cURL
+curl -X GET "https://api.cricpr.com/v1/matches?status=inProgress&page=1&limit=10" \
+  -H "Authorization: Bearer YOUR_ACCESS_TOKEN"
+```
+
+---
+
+## Get Match by ID
+
+<api>GET /v1/matches/:matchId</api>
+
+Retrieve detailed information about a specific match.
+
+### Authentication
+
+Not required. This is a public endpoint.
+
+### Path Parameters
+
+<ParamField path="matchId" type="string" required>
+  Match ID (MongoDB ObjectId)
+</ParamField>
+
+### Response
+
+Returns complete match details including:
+- Team instances with player lists
+- Match configuration (overs, type, etc.)
+- Toss details (if match has started)
+- Match status and timestamps
+- Scorer information
+
+### Example
+
+```bash cURL
+curl -X GET https://api.cricpr.com/v1/matches/688cbcf35ceca63a9cd62b6d
+```
+
+<CodeGroup>
+
+```javascript JavaScript
+const response = await fetch(
+  'https://api.cricpr.com/v1/matches/688cbcf35ceca63a9cd62b6d'
+);
+const match = await response.json();
+console.log(`Match: ${match.title}`);
+console.log(`Status: ${match.status}`);
+```
+
+```python Python
+import requests
+
+url = 'https://api.cricpr.com/v1/matches/688cbcf35ceca63a9cd62b6d'
+response = requests.get(url)
+match = response.json()
+print(f'Match: {match["title"]}')
+print(f'Status: {match["status"]}')
+```
+
+</CodeGroup>
+
+---
+
+## Update Match
+
+<api>PATCH /v1/matches/:matchId</api>
+
+Update match details. Can update basic match information and configuration.
+
+### Authentication
+
+Required. Include a Bearer token in the Authorization header.
+
+### Path Parameters
+
+<ParamField path="matchId" type="string" required>
+  Match ID (MongoDB ObjectId)
+</ParamField>
+
+### Request Body
+
+All fields are optional. Include only fields you want to update.
+
+<ParamField path="title" type="string">
+  Update match title
+</ParamField>
+
+<ParamField path="startdatetime" type="string">
+  Update start date and time (ISO 8601 format)
+</ParamField>
+
+<ParamField path="location" type="string">
+  Update match location
+</ParamField>
+
+<ParamField path="matchCategory" type="string">
+  Update match category
+</ParamField>
+
+<ParamField path="status" type="string">
+  Update match status. Options: `pending`, `inProgress`, `completed`, `cancelled`, `postponed`
+</ParamField>
+
+<ParamField path="overs" type="integer">
+  Update overs per innings (must comply with match type rules)
+</ParamField>
+
+<ParamField path="matchType" type="string">
+  Update match type. Options: `test`, `odi`, `t20`, `limitedOvers`
+</ParamField>
+
+<ParamField path="ballType" type="string">
+  Update ball type. Options: `leather`, `tennis`, `other`
+</ParamField>
+
+<ParamField path="pitchType" type="string">
+  Update pitch type. Options: `rough`, `cement`, `turf`, `astroturf`, `matting`, `other`
+</ParamField>
+
+<ParamField path="noOfDays" type="integer">
+  Update number of days (1-5)
+</ParamField>
+
+<ParamField path="oversPerBowler" type="integer">
+  Update max overs per bowler
+</ParamField>
+
+<ParamField path="showWagonWheel" type="boolean">
+  Enable/disable wagon wheel visualization
+</ParamField>
+
+### Example
+
+```bash cURL
+curl -X PATCH https://api.cricpr.com/v1/matches/688cbcf35ceca63a9cd62b6d \
+  -H "Authorization: Bearer YOUR_ACCESS_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "location": "New Stadium",
+    "startdatetime": "2025-08-02T18:00:00.000Z"
+  }'
+```
+
+---
+
+## Delete Match
+
+<api>DELETE /v1/matches/:matchId</api>
+
+Permanently delete a match and all related data (innings, overs, balls, statistics).
+
+<Warning>
+  This operation is irreversible. All match data including scores, statistics, and ball-by-ball records will be permanently deleted.
+</Warning>
+
+### Authentication
+
+Required. Include a Bearer token in the Authorization header.
+
+### Path Parameters
+
+<ParamField path="matchId" type="string" required>
+  Match ID (MongoDB ObjectId)
+</ParamField>
+
+### Response
+
+Returns HTTP 204 No Content on success.
+
+### Example
+
+```bash cURL
+curl -X DELETE https://api.cricpr.com/v1/matches/688cbcf35ceca63a9cd62b6d \
+  -H "Authorization: Bearer YOUR_ACCESS_TOKEN"
+```
+
+---
+
+## Register Teams
+
+<api>POST /v1/matches/:matchId/registerTeam</api>
+
+Register playing XI, captain, wicket keeper, and scorer for both teams before starting the match.
+
+### Authentication
+
+Required. Include a Bearer token in the Authorization header.
+
+### Path Parameters
+
+<ParamField path="matchId" type="string" required>
+  Match ID (MongoDB ObjectId)
+</ParamField>
+
+### Request Body
+
+<ParamField path="teamAPlayers" type="array">
+  Array of player IDs for Team A's playing XI (MongoDB ObjectIds)
+</ParamField>
+
+<ParamField path="teamBPlayers" type="array">
+  Array of player IDs for Team B's playing XI (MongoDB ObjectIds)
+</ParamField>
+
+<ParamField path="teamAGuestPlayers" type="array">
+  Array of guest player names for Team A (strings). Guest players don't need to be in the database.
+</ParamField>
+
+<ParamField path="teamBGuestPlayers" type="array">
+  Array of guest player names for Team B (strings)
+</ParamField>
+
+<ParamField path="teamACaptainId" type="string">
+  Captain player ID for Team A. Must be from teamAPlayers or use `guest_` prefix for guest players.
+</ParamField>
+
+<ParamField path="teamBCaptainId" type="string">
+  Captain player ID for Team B. Must be from teamBPlayers or use `guest_` prefix for guest players.
+</ParamField>
+
+<ParamField path="teamAWicketKeeperId" type="string">
+  Wicket keeper player ID for Team A
+</ParamField>
+
+<ParamField path="teamBWicketKeeperId" type="string">
+  Wicket keeper player ID for Team B
+</ParamField>
+
+<ParamField path="teamAScorerId" type="string">
+  Scorer player ID for Team A
+</ParamField>
+
+<ParamField path="teamBScorerId" type="string">
+  Scorer player ID for Team B
+</ParamField>
+
+### Example
+
+```bash cURL
+curl -X POST https://api.cricpr.com/v1/matches/688cbcf35ceca63a9cd62b6d/registerTeam \
+  -H "Authorization: Bearer YOUR_ACCESS_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "teamAPlayers": [
+      "688a2c29e7cf395e356b5f2f",
+      "688a39d037dd526c18a5bb16",
+      "688ca599fd71e61ed611f17c"
+    ],
+    "teamBPlayers": [
+      "688cb06818c2232abefa254e",
+      "688ca807fd71e61ed611f227",
+      "688cb1e218c2232abefa2584"
+    ],
+    "teamACaptainId": "688a39d037dd526c18a5bb16",
+    "teamBCaptainId": "688cb06818c2232abefa254e",
+    "teamAScorerId": "688a39d037dd526c18a5bb16",
+    "teamBScorerId": "688cb06818c2232abefa254e"
+  }'
+```
+
+---
+
+## Search Matches
+
+<api>GET /v1/matches/search</api>
+
+Search for matches by title, location, or match configuration fields.
+
+### Authentication
+
+Not required. This is a public endpoint.
+
+### Query Parameters
+
+<ParamField query="query" type="string" required>
+  Search query string. Searches across title, location, overs, ball type, match type, and pitch type.
+</ParamField>
+
+<ParamField query="limit" type="integer" default="10">
+  Maximum number of results (1-100)
+</ParamField>
+
+<ParamField query="page" type="integer" default="1">
+  Page number for pagination
+</ParamField>
+
+### Example
+
+```bash cURL
+curl -X GET "https://api.cricpr.com/v1/matches/search?query=Codefied&limit=10"
+```
+
+---
+
+## Get Matches by Team
+
+<api>GET /v1/matches/team/:teamId</api>
+
+Retrieve all matches for a specific team with pagination.
+
+### Path Parameters
+
+<ParamField path="teamId" type="string" required>
+  Team ID (MongoDB ObjectId)
+</ParamField>
+
+### Query Parameters
+
+<ParamField query="page" type="integer" default="1">
+  Page number
+</ParamField>
+
+<ParamField query="limit" type="integer" default="10">
+  Results per page
+</ParamField>
+
+### Example
+
+```bash cURL
+curl -X GET "https://api.cricpr.com/v1/matches/team/688a38f0fea3456a96402a30?page=1&limit=10"
+```
+
+---
+
+## Get Upcoming Matches
+
+<api>GET /v1/matches/upcoming</api>
+
+Retrieve all upcoming scheduled matches.
+
+### Example
+
+```bash cURL
+curl -X GET https://api.cricpr.com/v1/matches/upcoming
+```
+
+---
+
+## Get Completed Matches
+
+<api>GET /v1/matches/completed</api>
+
+Retrieve all completed matches.
+
+### Example
+
+```bash cURL
+curl -X GET https://api.cricpr.com/v1/matches/completed
+```
+
+---
+
+## Update Match URL
+
+<api>PATCH /v1/matches/:matchId/update-match-url</api>
+
+Update or set a custom URL for the match (for public sharing).
+
+### Authentication
+
+Required.
+
+### Request Body
+
+<ParamField path="url" type="string">
+  Custom URL for the match. Can be set to null to remove.
+</ParamField>
+
+### Example
+
+```bash cURL
+curl -X PATCH https://api.cricpr.com/v1/matches/688cbcf35ceca63a9cd62b6d/update-match-url \
+  -H "Authorization: Bearer YOUR_ACCESS_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"url": "codefied-vs-techvaders-final"}'
+```
+
+---
+
+## Change Scorer
+
+<api>POST /v1/matches/:matchId/change-scorer</api>
+
+Change the scorer for a match during play.
+
+### Authentication
+
+Required.
+
+### Request Body
+
+<ParamField path="scorerId" type="string" required>
+  New scorer player ID (MongoDB ObjectId)
+</ParamField>
+
+### Example
+
+```bash cURL
+curl -X POST https://api.cricpr.com/v1/matches/688cbcf35ceca63a9cd62b6d/change-scorer \
+  -H "Authorization: Bearer YOUR_ACCESS_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"scorerId": "688a39d037dd526c18a5bb16"}'
+```
+
+---
+
+## Player Management
+
+### Add Player to Team
+
+<api>POST /v1/matches/:matchId/:teamId/:playerId/add</api>
+
+Add a player to a team's playing XI during a match.
+
+### Remove Player from Team
+
+<api>POST /v1/matches/:matchId/:teamId/:playerId/remove</api>
+
+Remove a player from a team's playing XI.
+
+### Replace Player
+
+<api>POST /v1/matches/:matchId/:teamId/:playerId/replace</api>
+
+Replace a player with another player (substitution).
+
+**Request Body:**
+```json
+{
+  "newPlayerId": "507f1f77bcf86cd799439015"
+}
+```
+
+---
+
+## Error Responses
+
+<ResponseField name="400" type="error">
+  Bad Request - Invalid parameters or validation failure
+</ResponseField>
+
+<ResponseField name="401" type="error">
+  Unauthorized - Invalid or missing authentication token
+</ResponseField>
+
+<ResponseField name="404" type="error">
+  Not Found - Match or related resource not found
+</ResponseField>

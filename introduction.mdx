@@ -1,0 +1,167 @@
+---
+title: Cric PR Backend API
+description: A comprehensive cricket application backend with real-time scoring, player profiles, tournaments, and advanced statistics tracking
+---
+
+## Welcome to Cric PR Backend API
+
+Cric PR Backend is a production-ready cricket application API built with Node.js, Express, and MongoDB. It provides a complete suite of features for managing cricket matches, tournaments, player profiles, real-time scoring, and comprehensive statistics.
+
+<CardGroup cols={2}>
+  <Card
+    title="Quick Start"
+    icon="rocket"
+    href="/quickstart"
+  >
+    Get up and running with your first API call in under 5 minutes
+  </Card>
+  <Card
+    title="Authentication"
+    icon="shield-halved"
+    href="/authentication"
+  >
+    Learn about JWT authentication, token management, and securing your API calls
+  </Card>
+  <Card
+    title="API Reference"
+    icon="code"
+    href="/api/auth/overview"
+  >
+    Explore all available endpoints with detailed request and response examples
+  </Card>
+  <Card
+    title="Real-Time Updates"
+    icon="webhook"
+    href="/concepts/real-time-updates"
+  >
+    Set up real-time notifications for match events and scoring updates
+  </Card>
+</CardGroup>
+
+## Key Features
+
+<CardGroup cols={3}>
+  <Card title="Real-Time Scoring" icon="cricket-bat-ball">
+    Track live matches with ball-by-ball commentary, over management, and instant score updates via Socket.io
+  </Card>
+  <Card title="Player Profiles" icon="user">
+    Comprehensive player management with profile completeness tracking, status management, and statistics
+  </Card>
+  <Card title="Tournament Management" icon="trophy">
+    Create and manage tournaments with multiple teams, matches, and automated standings
+  </Card>
+  <Card title="Advanced Statistics" icon="chart-line">
+    Detailed batting, bowling, and fielding statistics with automated calculations and rankings
+  </Card>
+  <Card title="Multi-Auth Support" icon="lock">
+    Email/phone authentication, Google OAuth, Apple Sign-In, and JWT-based session management
+  </Card>
+  <Card title="Scalable Architecture" icon="server">
+    PM2 cluster mode with Redis caching, worker health monitoring, and production-ready deployment
+  </Card>
+</CardGroup>
+
+## Technology Stack
+
+Built with modern, production-tested technologies:
+
+- **Runtime**: Node.js (>= 12.0.0)
+- **Framework**: Express.js with comprehensive middleware
+- **Database**: MongoDB with Mongoose ODM (v8.18.0)
+- **Authentication**: Passport.js with JWT strategy
+- **Caching**: Redis & ioredis for high-performance caching
+- **Real-time**: Socket.io for live match updates
+- **Process Management**: PM2 with cluster support
+- **Validation**: Joi for request validation
+- **Documentation**: Swagger UI with OpenAPI spec
+
+<Note>
+  The API is fully documented using OpenAPI/Swagger specifications. Access the interactive API documentation at `/v1/docs` on your running instance.
+</Note>
+
+## API Architecture
+
+The API follows RESTful principles with a well-organized structure:
+
+```
+/v1
+├── /auth          # Authentication endpoints
+├── /users         # User management
+├── /players       # Player profiles
+├── /teams         # Team management
+├── /tournaments   # Tournament operations
+├── /matches       # Match management
+├── /innings       # Innings tracking
+├── /overs         # Over management
+├── /balls         # Ball-by-ball scoring
+├── /stats         # Statistics and analytics
+├── /notifications # Push notifications
+└── /admin         # Admin operations
+```
+
+## Quick Example
+
+Here's how simple it is to get started:
+
+<CodeGroup>
+```bash cURL
+curl -X POST https://api.cricpr.com/v1/auth/register \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "John Doe",
+    "email": "john@example.com",
+    "password": "password123",
+    "role": "user"
+  }'
+```
+
+```javascript JavaScript
+const response = await fetch('https://api.cricpr.com/v1/auth/register', {
+  method: 'POST',
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify({
+    name: 'John Doe',
+    email: 'john@example.com',
+    password: 'password123',
+    role: 'user'
+  })
+});
+const data = await response.json();
+```
+
+```python Python
+import requests
+
+response = requests.post(
+  'https://api.cricpr.com/v1/auth/register',
+  json={
+    'name': 'John Doe',
+    'email': 'john@example.com',
+    'password': 'password123',
+    'role': 'user'
+  }
+)
+data = response.json()
+```
+</CodeGroup>
+
+## Next Steps
+
+<Steps>
+  <Step title="Get Started">
+    Follow the [Quick Start Guide](/quickstart) to register and make your first authenticated API call
+  </Step>
+  <Step title="Understand Authentication">
+    Read the [Authentication Guide](/authentication) to learn about JWT tokens and security
+  </Step>
+  <Step title="Explore Endpoints">
+    Browse the [API Reference](/api/auth/overview) to discover all available endpoints
+  </Step>
+  <Step title="Build Your App">
+    Start integrating Cric PR into your cricket application
+  </Step>
+</Steps>
+
+<Info>
+  Need help? Check out our [setup guide](/guides/setup) for detailed configuration instructions.
+</Info>

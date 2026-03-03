@@ -1,0 +1,367 @@
+---
+title: 'Create Match'
+description: 'Create a new cricket match with teams and configuration'
+api: 'POST /v1/matches'
+---
+
+## Overview
+
+Create a new cricket match by specifying the competing teams, match format, and configuration details. This endpoint initializes a match in `pending` status, ready for team registration.
+
+## Authentication
+
+This endpoint requires authentication. Include a Bearer token in the Authorization header.
+
+```bash
+Authorization: Bearer YOUR_ACCESS_TOKEN
+```
+
+## Request Body
+
+### Required Parameters
+
+<ParamField path="teamA" type="string" required>
+  Team A ID (MongoDB ObjectId). The first team in the match.
+</ParamField>
+
+<ParamField path="teamB" type="string" required>
+  Team B ID (MongoDB ObjectId). The second team in the match. Must be different from Team A.
+</ParamField>
+
+<ParamField path="title" type="string" required>
+  Match title. Example: "Codefied vs Techvaders" or "Team A vs Team B - Quarter Final"
+</ParamField>
+
+<ParamField path="startdatetime" type="string" required>
+  Match start date and time in ISO 8601 format. If set to a future date, the match will be marked as scheduled.
+  
+  Example: `"2025-08-01T18:00:00.000Z"`
+</ParamField>
+
+<ParamField path="overs" type="integer" required>
+  Number of overs per innings. Must be at least 1.
+  
+  - Test: Set to high value like 450 (unlimited)
+  - ODI: Must be 50
+  - T20: Must be 20
+  - Limited Overs: Any value (e.g., 5, 10, 15)
+</ParamField>
+
+<ParamField path="matchType" type="string" required>
+  Type of cricket match format.
+  
+  **Options:**
+  - `test` - Test match (2-5 days)
+  - `odi` - One Day International (50 overs)
+  - `t20` - Twenty20 (20 overs)
+  - `limitedOvers` - Custom limited overs format
+</ParamField>
+
+<ParamField path="noOfDays" type="integer" required>
+  Number of days for the match.
+  
+  - Test: 2-5 days
+  - ODI/T20/Limited Overs: Must be 1
+</ParamField>
+
+<ParamField path="oversPerBowler" type="integer" required>
+  Maximum overs a single bowler can bowl. Must be 0 or greater.
+  
+  - Test: 0 (unlimited)
+  - ODI: 10
+  - T20: 4
+  - Limited Overs: Cannot exceed total overs
+</ParamField>
+
+### Optional Parameters
+
+<ParamField path="location" type="string">
+  Match venue/location. Example: "Karachi", "Lord's Cricket Ground"
+</ParamField>
+
+<ParamField path="matchCategory" type="string">
+  Match category or type. Example: "friendly", "league", "knockout"
+</ParamField>
+
+<ParamField path="ballType" type="string">
+  Type of ball used in the match.
+  
+  **Options:**
+  - `leather` - Professional leather ball
+  - `tennis` - Tennis ball
+  - `other` - Custom ball type
+</ParamField>
+
+<ParamField path="pitchType" type="string">
+  Type of pitch surface.
+  
+  **Options:**
+  - `rough` - Rough/natural pitch
+  - `cement` - Concrete pitch
+  - `turf` - Natural grass pitch
+  - `astroturf` - Artificial turf
+  - `matting` - Matting pitch
+  - `other` - Custom pitch type
+</ParamField>
+
+<ParamField path="showWagonWheel" type="boolean" default="false">
+  Enable wagon wheel visualization for this match. Default is false.
+</ParamField>
+
+## Response
+
+<ResponseField name="id" type="string">
+  Unique match ID (MongoDB ObjectId)
+</ResponseField>
+
+<ResponseField name="teamAInstanceId" type="object">
+  Team A instance with players and configuration
+  
+  <Expandable title="properties">
+    <ResponseField name="id" type="string">
+      Team instance ID
+    </ResponseField>
+    <ResponseField name="teamId" type="object">
+      Team details (name, logo, etc.)
+    </ResponseField>
+    <ResponseField name="players" type="array">
+      Array of player IDs
+    </ResponseField>
+    <ResponseField name="captainId" type="string">
+      Captain player ID
+    </ResponseField>
+    <ResponseField name="scorerId" type="string">
+      Scorer player ID
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+<ResponseField name="teamBInstanceId" type="object">
+  Team B instance with players and configuration (same structure as teamAInstanceId)
+</ResponseField>
+
+<ResponseField name="matchConfigId" type="object">
+  Match configuration details
+  
+  <Expandable title="properties">
+    <ResponseField name="id" type="string">
+      Match config ID
+    </ResponseField>
+    <ResponseField name="overs" type="integer">
+      Overs per innings
+    </ResponseField>
+    <ResponseField name="matchType" type="string">
+      Match type (test, odi, t20, limitedOvers)
+    </ResponseField>
+    <ResponseField name="ballType" type="string">
+      Ball type
+    </ResponseField>
+    <ResponseField name="pitchType" type="string">
+      Pitch type
+    </ResponseField>
+    <ResponseField name="noOfDays" type="integer">
+      Number of match days
+    </ResponseField>
+    <ResponseField name="oversPerBowler" type="integer">
+      Max overs per bowler
+    </ResponseField>
+    <ResponseField name="showWagonWheel" type="boolean">
+      Wagon wheel enabled
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+<ResponseField name="title" type="string">
+  Match title
+</ResponseField>
+
+<ResponseField name="startdatetime" type="string">
+  Match start date and time (ISO 8601)
+</ResponseField>
+
+<ResponseField name="location" type="string">
+  Match location
+</ResponseField>
+
+<ResponseField name="matchCategory" type="string">
+  Match category
+</ResponseField>
+
+<ResponseField name="status" type="string">
+  Match status. Will be "pending" for newly created matches.
+</ResponseField>
+
+<ResponseField name="isScheduled" type="boolean">
+  Whether the match is scheduled for future (true if startdatetime is in the future)
+</ResponseField>
+
+<ResponseField name="teamsRegistered" type="boolean">
+  Whether playing XI has been registered (false for new matches)
+</ResponseField>
+
+<ResponseField name="matchType" type="string">
+  Match type ("friendly" or "tournament")
+</ResponseField>
+
+## Examples
+
+<CodeGroup>
+
+```bash cURL
+curl -X POST https://api.cricpr.com/v1/matches \
+  -H "Authorization: Bearer YOUR_ACCESS_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "teamA": "688a38f0fea3456a96402a30",
+    "teamB": "688cb3a018c2232abefa2603",
+    "title": "Codefied vs Techvaders",
+    "startdatetime": "2025-08-01T18:00:00.000Z",
+    "location": "Karachi",
+    "matchCategory": "friendly",
+    "overs": 20,
+    "matchType": "t20",
+    "ballType": "tennis",
+    "pitchType": "matting",
+    "noOfDays": 1,
+    "oversPerBowler": 4,
+    "showWagonWheel": true
+  }'
+```
+
+```javascript JavaScript
+const response = await fetch('https://api.cricpr.com/v1/matches', {
+  method: 'POST',
+  headers: {
+    'Authorization': 'Bearer YOUR_ACCESS_TOKEN',
+    'Content-Type': 'application/json'
+  },
+  body: JSON.stringify({
+    teamA: '688a38f0fea3456a96402a30',
+    teamB: '688cb3a018c2232abefa2603',
+    title: 'Codefied vs Techvaders',
+    startdatetime: '2025-08-01T18:00:00.000Z',
+    location: 'Karachi',
+    matchCategory: 'friendly',
+    overs: 20,
+    matchType: 't20',
+    ballType: 'tennis',
+    pitchType: 'matting',
+    noOfDays: 1,
+    oversPerBowler: 4,
+    showWagonWheel: true
+  })
+});
+
+const match = await response.json();
+console.log('Match created:', match.id);
+```
+
+```python Python
+import requests
+
+url = 'https://api.cricpr.com/v1/matches'
+headers = {
+    'Authorization': 'Bearer YOUR_ACCESS_TOKEN',
+    'Content-Type': 'application/json'
+}
+data = {
+    'teamA': '688a38f0fea3456a96402a30',
+    'teamB': '688cb3a018c2232abefa2603',
+    'title': 'Codefied vs Techvaders',
+    'startdatetime': '2025-08-01T18:00:00.000Z',
+    'location': 'Karachi',
+    'matchCategory': 'friendly',
+    'overs': 20,
+    'matchType': 't20',
+    'ballType': 'tennis',
+    'pitchType': 'matting',
+    'noOfDays': 1,
+    'oversPerBowler': 4,
+    'showWagonWheel': True
+}
+
+response = requests.post(url, json=data, headers=headers)
+match = response.json()
+print(f'Match created: {match["id"]}')
+```
+
+</CodeGroup>
+
+### Limited Overs Match Example
+
+```bash cURL
+curl -X POST https://api.cricpr.com/v1/matches \
+  -H "Authorization: Bearer YOUR_ACCESS_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "teamA": "688a38f0fea3456a96402a30",
+    "teamB": "688cb3a018c2232abefa2603",
+    "title": "Quick Match - 5 Overs",
+    "startdatetime": "2025-08-01T18:00:00.000Z",
+    "location": "Local Ground",
+    "overs": 5,
+    "matchType": "limitedOvers",
+    "ballType": "tennis",
+    "pitchType": "cement",
+    "noOfDays": 1,
+    "oversPerBowler": 2
+  }'
+```
+
+## Validation Rules
+
+The API enforces ICC-compliant rules:
+
+### Test Match
+- `noOfDays` must be between 2 and 5
+- `oversPerBowler` must be 0 (unlimited)
+
+### ODI
+- `overs` must be exactly 50
+- `noOfDays` must be 1
+- `oversPerBowler` must be 10
+
+### T20
+- `overs` must be exactly 20
+- `noOfDays` must be 1
+- `oversPerBowler` must be 4
+
+### Limited Overs
+- `noOfDays` must be 1
+- `oversPerBowler` cannot exceed `overs`
+
+## Error Responses
+
+<ResponseField name="400" type="error">
+  Bad Request - Invalid parameters or validation failure
+  
+  ```json
+  {
+    "code": 400,
+    "message": "T20 matches must have 20 overs per innings"
+  }
+  ```
+</ResponseField>
+
+<ResponseField name="401" type="error">
+  Unauthorized - Invalid or missing authentication token
+</ResponseField>
+
+<ResponseField name="404" type="error">
+  Not Found - One or both teams do not exist
+  
+  ```json
+  {
+    "code": 404,
+    "message": "Team A not found"
+  }
+  ```
+</ResponseField>
+
+## Next Steps
+
+After creating a match:
+
+1. [Register Teams](/api/matches/manage#register-teams) - Select playing XI for both teams
+2. [Start Match](/api/matches/scoring#start-match) - Conduct toss and begin the match
+3. [Update Scores](/api/innings/scoring) - Record ball-by-ball scores during the match

@@ -1,0 +1,516 @@
+---
+title: 'Create Tournament'
+description: 'Create and configure a new cricket tournament'
+---
+
+## Create Tournament
+
+<RequestExample>
+```bash cURL
+curl -X POST 'https://api.example.com/v1/tournaments' \
+  -H 'Authorization: Bearer <token>' \
+  -H 'Content-Type: application/json' \
+  -d '{
+    "name": "Summer Premier League 2024",
+    "city": "Mumbai",
+    "startDate": "2024-06-01T00:00:00.000Z",
+    "endDate": "2024-06-30T23:59:59.999Z",
+    "maxTeams": 8,
+    "format": "hybrid",
+    "organizerType": "User",
+    "organizerId": "507f1f77bcf86cd799439011",
+    "description": "Annual summer cricket tournament",
+    "registrationDeadline": "2024-05-25T23:59:59.999Z",
+    "prize": "₹50,000 cash prize + Trophy",
+    "entryFee": 2000,
+    "isPublic": true
+  }'
+```
+</RequestExample>
+
+Create a new tournament with specified format and configuration.
+
+### Endpoint
+
+```
+POST /v1/tournaments
+```
+
+### Authentication
+
+<Icon icon="lock" /> Requires authentication
+
+### Request Body
+
+<ParamField body="name" type="string" required>
+  Tournament name. Must be unique and descriptive.
+  
+  **Example:** "Mumbai Premier League 2024"
+</ParamField>
+
+<ParamField body="city" type="string" required>
+  City where tournament is held.
+  
+  **Example:** "Mumbai"
+</ParamField>
+
+<ParamField body="startDate" type="date" required>
+  Tournament start date in ISO 8601 format.
+  
+  **Example:** "2024-06-01T00:00:00.000Z"
+</ParamField>
+
+<ParamField body="endDate" type="date" required>
+  Tournament end date in ISO 8601 format. Must be after startDate.
+  
+  **Example:** "2024-06-30T23:59:59.999Z"
+</ParamField>
+
+<ParamField body="maxTeams" type="number" required>
+  Maximum number of teams allowed. Minimum value is 2.
+  
+  **Example:** 8
+</ParamField>
+
+<ParamField body="format" type="string" required>
+  Tournament format type.
+  
+  **Options:**
+  - `round_robin` - All teams play each other
+  - `knockout` - Single elimination bracket
+  - `hybrid` - Group stage followed by knockout
+  - `point_based` - Custom points system
+  
+  **Example:** "hybrid"
+</ParamField>
+
+<ParamField body="organizerType" type="string" required>
+  Type of organizer entity.
+  
+  **Options:**
+  - `User` - Regular user organizing tournament
+  - `Player` - Player organizing tournament
+  
+  **Example:** "User"
+</ParamField>
+
+<ParamField body="organizerId" type="string" required>
+  MongoDB ObjectId of the organizer (User or Player).
+  
+  **Example:** "507f1f77bcf86cd799439011"
+</ParamField>
+
+<ParamField body="description" type="string">
+  Detailed tournament description and rules.
+  
+  **Example:** "Annual summer cricket tournament featuring top local teams"
+</ParamField>
+
+<ParamField body="coverImage" type="string">
+  URL to tournament cover image.
+  
+  **Example:** "https://example.com/images/tournament-cover.jpg"
+</ParamField>
+
+<ParamField body="banner" type="string">
+  URL to tournament banner image.
+  
+  **Example:** "https://example.com/images/tournament-banner.jpg"
+</ParamField>
+
+<ParamField body="registrationDeadline" type="date">
+  Last date for team registration in ISO 8601 format.
+  
+  **Example:** "2024-05-25T23:59:59.999Z"
+</ParamField>
+
+<ParamField body="prize" type="string">
+  Prize description for winners.
+  
+  **Example:** "₹50,000 cash prize + Trophy + Medals"
+</ParamField>
+
+<ParamField body="entryFee" type="number">
+  Entry fee per team in currency units. Defaults to 0.
+  
+  **Example:** 2000
+</ParamField>
+
+<ParamField body="isPublic" type="boolean">
+  Whether tournament is publicly visible. Defaults to true.
+  
+  **Example:** true
+</ParamField>
+
+### Response
+
+<ResponseField name="id" type="string">
+  Unique tournament identifier.
+</ResponseField>
+
+<ResponseField name="name" type="string">
+  Tournament name.
+</ResponseField>
+
+<ResponseField name="city" type="string">
+  Tournament city.
+</ResponseField>
+
+<ResponseField name="startDate" type="date">
+  Tournament start date.
+</ResponseField>
+
+<ResponseField name="endDate" type="date">
+  Tournament end date.
+</ResponseField>
+
+<ResponseField name="maxTeams" type="number">
+  Maximum teams allowed.
+</ResponseField>
+
+<ResponseField name="currentTeamsCount" type="number">
+  Current number of registered teams.
+</ResponseField>
+
+<ResponseField name="format" type="string">
+  Tournament format (round_robin, knockout, hybrid, point_based).
+</ResponseField>
+
+<ResponseField name="organizerType" type="string">
+  Organizer type (User or Player).
+</ResponseField>
+
+<ResponseField name="organizerId" type="string">
+  Organizer's ID.
+</ResponseField>
+
+<ResponseField name="status" type="string">
+  Tournament status (upcoming, ongoing, completed, cancelled).
+</ResponseField>
+
+<ResponseField name="description" type="string">
+  Tournament description.
+</ResponseField>
+
+<ResponseField name="coverImage" type="string">
+  Cover image URL.
+</ResponseField>
+
+<ResponseField name="banner" type="string">
+  Banner image URL.
+</ResponseField>
+
+<ResponseField name="registrationDeadline" type="date">
+  Registration deadline.
+</ResponseField>
+
+<ResponseField name="prize" type="string">
+  Prize description.
+</ResponseField>
+
+<ResponseField name="entryFee" type="number">
+  Entry fee amount.
+</ResponseField>
+
+<ResponseField name="isPublic" type="boolean">
+  Public visibility flag.
+</ResponseField>
+
+<ResponseField name="teamIds" type="array">
+  Array of registered team IDs.
+</ResponseField>
+
+<ResponseField name="winnerTeamId" type="string">
+  Winner team ID (null until tournament completes).
+</ResponseField>
+
+<ResponseField name="createdAt" type="date">
+  Tournament creation timestamp.
+</ResponseField>
+
+<ResponseField name="updatedAt" type="date">
+  Last update timestamp.
+</ResponseField>
+
+### Response Example
+
+<ResponseExample>
+```json 201 - Created
+{
+  "id": "65f8b2a4c1234567890abcde",
+  "name": "Summer Premier League 2024",
+  "city": "Mumbai",
+  "startDate": "2024-06-01T00:00:00.000Z",
+  "endDate": "2024-06-30T23:59:59.999Z",
+  "maxTeams": 8,
+  "currentTeamsCount": 0,
+  "format": "hybrid",
+  "organizerType": "User",
+  "organizerId": "507f1f77bcf86cd799439011",
+  "status": "upcoming",
+  "description": "Annual summer cricket tournament",
+  "coverImage": null,
+  "banner": null,
+  "registrationDeadline": "2024-05-25T23:59:59.999Z",
+  "prize": "₹50,000 cash prize + Trophy",
+  "entryFee": 2000,
+  "isPublic": true,
+  "teamIds": [],
+  "winnerTeamId": null,
+  "createdAt": "2024-03-03T10:30:00.000Z",
+  "updatedAt": "2024-03-03T10:30:00.000Z"
+}
+```
+
+```json 400 - Validation Error
+{
+  "code": 400,
+  "message": "End date must be after start date"
+}
+```
+
+```json 401 - Unauthorized
+{
+  "code": 401,
+  "message": "Please authenticate"
+}
+```
+
+```json 404 - Organizer Not Found
+{
+  "code": 404,
+  "message": "Organizer user not found"
+}
+```
+</ResponseExample>
+
+## Update Tournament
+
+Update tournament details after creation.
+
+<RequestExample>
+```bash cURL
+curl -X PATCH 'https://api.example.com/v1/tournaments/65f8b2a4c1234567890abcde' \
+  -H 'Authorization: Bearer <token>' \
+  -H 'Content-Type: application/json' \
+  -d '{
+    "prize": "₹75,000 cash prize + Trophy",
+    "description": "Updated tournament details with increased prize money"
+  }'
+```
+</RequestExample>
+
+### Endpoint
+
+```
+PATCH /v1/tournaments/{tournamentId}
+```
+
+### Path Parameters
+
+<ParamField path="tournamentId" type="string" required>
+  Tournament ID to update.
+</ParamField>
+
+### Request Body
+
+All fields from create tournament are optional. Only include fields you want to update.
+
+<ParamField body="status" type="string">
+  Manually update tournament status.
+  
+  **Options:** upcoming, ongoing, completed, cancelled
+</ParamField>
+
+### Response
+
+Returns the updated tournament object.
+
+## Get Tournament
+
+Retrieve details of a specific tournament.
+
+<RequestExample>
+```bash cURL
+curl -X GET 'https://api.example.com/v1/tournaments/65f8b2a4c1234567890abcde' \
+  -H 'Content-Type: application/json'
+```
+</RequestExample>
+
+### Endpoint
+
+```
+GET /v1/tournaments/{tournamentId}
+```
+
+### Authentication
+
+<Icon icon="unlock" /> No authentication required
+
+### Path Parameters
+
+<ParamField path="tournamentId" type="string" required>
+  Tournament ID to retrieve.
+</ParamField>
+
+### Response
+
+Returns tournament object with additional computed fields:
+
+<ResponseField name="isKnockout" type="boolean">
+  Whether knockout stage can be created (based on qualified teams).
+</ResponseField>
+
+<ResponseField name="isGroup" type="boolean">
+  Whether group stage matches have been completed.
+</ResponseField>
+
+<ResponseField name="winningTeamName" type="string">
+  Winner team name (if tournament is completed).
+</ResponseField>
+
+## List Tournaments
+
+Retrieve a paginated list of tournaments with filters.
+
+<RequestExample>
+```bash cURL
+curl -X GET 'https://api.example.com/v1/tournaments?city=Mumbai&status=ongoing&limit=10&page=1' \
+  -H 'Authorization: Bearer <token>' \
+  -H 'Content-Type: application/json'
+```
+</RequestExample>
+
+### Endpoint
+
+```
+GET /v1/tournaments
+```
+
+### Authentication
+
+<Icon icon="lock" /> Requires authentication
+
+### Query Parameters
+
+<ParamField query="organizerId" type="string">
+  Filter by organizer ID.
+</ParamField>
+
+<ParamField query="organizerType" type="string">
+  Filter by organizer type (user or player).
+</ParamField>
+
+<ParamField query="city" type="string">
+  Filter by city.
+</ParamField>
+
+<ParamField query="status" type="string">
+  Filter by status (upcoming, ongoing, completed, cancelled).
+</ParamField>
+
+<ParamField query="format" type="string">
+  Filter by format (round_robin, knockout, hybrid, point_based).
+</ParamField>
+
+<ParamField query="isPublic" type="boolean">
+  Filter by public visibility.
+</ParamField>
+
+<ParamField query="participant" type="boolean">
+  Filter tournaments where user is a participant (true) or not (false).
+</ParamField>
+
+<ParamField query="participated" type="boolean">
+  Filter tournaments where user has participated. Returns resultStatus (won/loss/ongoing).
+</ParamField>
+
+<ParamField query="past" type="boolean">
+  Include completed matches in response when true.
+</ParamField>
+
+<ParamField query="sortBy" type="string">
+  Sort field and order. Format: `field:order`
+  
+  **Example:** "createdAt:desc"
+</ParamField>
+
+<ParamField query="limit" type="number">
+  Number of results per page. Default: 10
+</ParamField>
+
+<ParamField query="page" type="number">
+  Page number. Default: 1
+</ParamField>
+
+### Response
+
+<ResponseField name="results" type="array">
+  Array of tournament objects.
+</ResponseField>
+
+<ResponseField name="page" type="number">
+  Current page number.
+</ResponseField>
+
+<ResponseField name="limit" type="number">
+  Results per page.
+</ResponseField>
+
+<ResponseField name="totalPages" type="number">
+  Total number of pages.
+</ResponseField>
+
+<ResponseField name="totalResults" type="number">
+  Total number of tournaments matching filter.
+</ResponseField>
+
+## Delete Tournament
+
+Delete a tournament that hasn't started yet.
+
+<RequestExample>
+```bash cURL
+curl -X DELETE 'https://api.example.com/v1/tournaments/65f8b2a4c1234567890abcde' \
+  -H 'Authorization: Bearer <token>'
+```
+</RequestExample>
+
+### Endpoint
+
+```
+DELETE /v1/tournaments/{tournamentId}
+```
+
+### Authentication
+
+<Icon icon="lock" /> Requires authentication
+
+### Path Parameters
+
+<ParamField path="tournamentId" type="string" required>
+  Tournament ID to delete.
+</ParamField>
+
+### Response
+
+Returns `204 No Content` on success.
+
+<ResponseExample>
+```json 400 - Cannot Delete
+{
+  "code": 400,
+  "message": "Cannot delete tournament with ongoing or completed matches"
+}
+```
+</ResponseExample>
+
+## Next Steps
+
+After creating a tournament:
+
+1. [Add teams to tournament](/api/tournaments/groups#add-teams-to-tournament)
+2. [Create tournament stages](/api/tournaments/groups#create-tournament-stage)
+3. [Set up groups and assign teams](/api/tournaments/groups#create-group)
+4. [Generate matches](/api/tournaments/groups#generate-round-robin-matches)
+5. [Track points and standings](/api/tournaments/points-table)

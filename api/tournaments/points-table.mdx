@@ -1,0 +1,514 @@
+---
+title: 'Points Table & Standings'
+description: 'Track tournament standings, points calculation, and team rankings'
+---
+
+## Overview
+
+The points table tracks team performance throughout a tournament stage. It automatically calculates:
+
+- Matches played, won, lost, drawn
+- Points based on stage rules
+- Net Run Rate (NRR)
+- Team rankings and positions
+- Qualification status
+- Form (recent match results)
+
+## Get Tournament Points Table
+
+Retrieve all points tables for a tournament (all stages and groups).
+
+<RequestExample>
+```bash cURL
+curl -X GET 'https://api.example.com/v1/tournaments/65f8b2a4c1234567890abcde/points-table' \
+  -H 'Content-Type: application/json'
+```
+</RequestExample>
+
+### Endpoint
+
+```
+GET /v1/tournaments/{tournamentId}/points-table
+```
+
+### Authentication
+
+<Icon icon="unlock" /> No authentication required
+
+### Path Parameters
+
+<ParamField path="tournamentId" type="string" required>
+  Tournament ID to get points tables for.
+</ParamField>
+
+### Response
+
+Returns array of points table entries organized by stage and group.
+
+<ResponseExample>
+```json 200 - Success
+[
+  {
+    "stage": {
+      "id": "65f8b2a4c1234567890stg01",
+      "name": "Group Stage",
+      "format": "round_robin"
+    },
+    "group": {
+      "id": "65f8b2a4c1234567890grp01",
+      "name": "Group A"
+    },
+    "standings": [
+      {
+        "position": 1,
+        "teamId": "65f8b2a4c1234567890abc01",
+        "teamName": "Mumbai Warriors",
+        "teamLogo": "https://example.com/logos/mumbai.png",
+        "matchesPlayed": 3,
+        "matchesWon": 3,
+        "matchesLost": 0,
+        "matchesDrawn": 0,
+        "matchesNoResult": 0,
+        "points": 6,
+        "netRunRate": 1.850,
+        "totalRunsScored": 450,
+        "totalRunsConceded": 380,
+        "totalOversPlayed": 60,
+        "totalOversFaced": 60,
+        "totalWicketsLost": 15,
+        "totalWicketsTaken": 24,
+        "highestScore": 185,
+        "lowestScore": 142,
+        "winStreak": 3,
+        "form": "WWWWW",
+        "qualificationStatus": "qualified",
+        "superOverWins": 0,
+        "superOverLosses": 0
+      }
+    ]
+  }
+]
+```
+</ResponseExample>
+
+## Get Stage Points Table
+
+Retrieve points table for a specific stage or group.
+
+<RequestExample>
+```bash cURL
+# Get points table for entire stage
+curl -X GET 'https://api.example.com/v1/tournaments/stages/65f8b2a4c1234567890stg01/points-table' \
+  -H 'Content-Type: application/json'
+
+# Get points table for specific group
+curl -X GET 'https://api.example.com/v1/tournaments/stages/65f8b2a4c1234567890stg01/points-table?groupId=65f8b2a4c1234567890grp01' \
+  -H 'Content-Type: application/json'
+```
+</RequestExample>
+
+### Endpoint
+
+```
+GET /v1/tournaments/stages/{stageId}/points-table
+```
+
+### Authentication
+
+<Icon icon="unlock" /> No authentication required
+
+### Path Parameters
+
+<ParamField path="stageId" type="string" required>
+  Stage ID to get points table for.
+</ParamField>
+
+### Query Parameters
+
+<ParamField query="groupId" type="string">
+  Optional group ID to filter points table for specific group.
+</ParamField>
+
+### Response
+
+Returns array of team standings sorted by:
+1. Points (descending)
+2. Net Run Rate (descending)
+3. Total runs scored (descending)
+4. Matches won (descending)
+
+<ResponseField name="position" type="number">
+  Team's current position in standings (1 = first place).
+</ResponseField>
+
+<ResponseField name="teamId" type="string">
+  Team's unique identifier.
+</ResponseField>
+
+<ResponseField name="teamName" type="string">
+  Team name.
+</ResponseField>
+
+<ResponseField name="teamLogo" type="string">
+  Team logo URL.
+</ResponseField>
+
+<ResponseField name="matchesPlayed" type="number">
+  Total matches played.
+</ResponseField>
+
+<ResponseField name="matchesWon" type="number">
+  Total matches won.
+</ResponseField>
+
+<ResponseField name="matchesLost" type="number">
+  Total matches lost.
+</ResponseField>
+
+<ResponseField name="matchesDrawn" type="number">
+  Total matches drawn/tied.
+</ResponseField>
+
+<ResponseField name="matchesNoResult" type="number">
+  Total matches with no result (abandoned/cancelled).
+</ResponseField>
+
+<ResponseField name="points" type="number">
+  Total points earned based on stage rules.
+</ResponseField>
+
+<ResponseField name="netRunRate" type="number">
+  Net Run Rate calculated as: (Runs Scored / Overs Played) - (Runs Conceded / Overs Faced)
+</ResponseField>
+
+<ResponseField name="totalRunsScored" type="number">
+  Total runs scored by team across all matches.
+</ResponseField>
+
+<ResponseField name="totalRunsConceded" type="number">
+  Total runs conceded by team across all matches.
+</ResponseField>
+
+<ResponseField name="totalOversPlayed" type="number">
+  Total overs batted by team.
+</ResponseField>
+
+<ResponseField name="totalOversFaced" type="number">
+  Total overs bowled by opposition against team.
+</ResponseField>
+
+<ResponseField name="totalWicketsLost" type="number">
+  Total wickets lost by team.
+</ResponseField>
+
+<ResponseField name="totalWicketsTaken" type="number">
+  Total wickets taken by team.
+</ResponseField>
+
+<ResponseField name="highestScore" type="number">
+  Team's highest score in a single innings.
+</ResponseField>
+
+<ResponseField name="lowestScore" type="number">
+  Team's lowest score in a single innings.
+</ResponseField>
+
+<ResponseField name="winStreak" type="number">
+  Current consecutive wins.
+</ResponseField>
+
+<ResponseField name="form" type="string">
+  Last 5 match results (W = Win, L = Loss, D = Draw, N = No Result).
+  
+  **Example:** "WWLWW" (Won last 2, lost 1, won 2 before that)
+</ResponseField>
+
+<ResponseField name="qualificationStatus" type="string">
+  Qualification status for next stage.
+  
+  **Options:**
+  - `qualified` - Team has qualified for next stage
+  - `eliminated` - Team is eliminated
+  - `pending` - Status not yet determined
+</ResponseField>
+
+<ResponseField name="superOverWins" type="number">
+  Matches won via super over.
+</ResponseField>
+
+<ResponseField name="superOverLosses" type="number">
+  Matches lost via super over.
+</ResponseField>
+
+## Update Points After Match
+
+Update points table after a match is completed.
+
+<RequestExample>
+```bash cURL
+curl -X POST 'https://api.example.com/v1/tournaments/matches/65f8b2a4c1234567890mtc01/update-points' \
+  -H 'Authorization: Bearer <token>' \
+  -H 'Content-Type: application/json' \
+  -d '{
+    "winnerTeamId": "65f8b2a4c1234567890abc01",
+    "loserTeamId": "65f8b2a4c1234567890abc02",
+    "isDraw": false,
+    "isNoResult": false,
+    "isSuperOverWin": false,
+    "winnerRuns": 185,
+    "loserRuns": 178,
+    "winnerOvers": 20,
+    "loserOvers": 20,
+    "winnerWickets": 5,
+    "loserWickets": 10
+  }'
+```
+</RequestExample>
+
+### Endpoint
+
+```
+POST /v1/tournaments/matches/{tournamentMatchId}/update-points
+```
+
+### Authentication
+
+<Icon icon="lock" /> Requires authentication
+
+### Path Parameters
+
+<ParamField path="tournamentMatchId" type="string" required>
+  Tournament match ID to update points for.
+</ParamField>
+
+### Request Body
+
+<ParamField body="winnerTeamId" type="string">
+  Winner team ID. Null if draw or no result.
+</ParamField>
+
+<ParamField body="loserTeamId" type="string">
+  Loser team ID. Null if draw or no result.
+</ParamField>
+
+<ParamField body="isDraw" type="boolean" required>
+  Whether match ended in a draw/tie.
+</ParamField>
+
+<ParamField body="isNoResult" type="boolean" required>
+  Whether match had no result (abandoned/cancelled).
+</ParamField>
+
+<ParamField body="isSuperOverWin" type="boolean">
+  Whether match was won via super over. Default: false
+</ParamField>
+
+<ParamField body="winnerRuns" type="number">
+  Total runs scored by winner.
+</ParamField>
+
+<ParamField body="loserRuns" type="number">
+  Total runs scored by loser.
+</ParamField>
+
+<ParamField body="winnerOvers" type="number">
+  Total overs played by winner.
+</ParamField>
+
+<ParamField body="loserOvers" type="number">
+  Total overs played by loser.
+</ParamField>
+
+<ParamField body="winnerWickets" type="number">
+  Wickets lost by winner.
+</ParamField>
+
+<ParamField body="loserWickets" type="number">
+  Wickets lost by loser.
+</ParamField>
+
+### Response
+
+<ResponseExample>
+```json 200 - Success
+{
+  "message": "Points table updated successfully"
+}
+```
+
+```json 404 - Match Not Found
+{
+  "code": 404,
+  "message": "Tournament match not found"
+}
+```
+</ResponseExample>
+
+### What Happens When Points Update
+
+1. **Winner's entry updated:**
+   - `matchesPlayed` +1
+   - `matchesWon` +1 (or `matchesDrawn` +1 if draw)
+   - `points` += stage's `pointsForWin` (or `pointsForDraw`)
+   - Stats updated (runs, wickets, overs)
+   - NRR recalculated
+
+2. **Loser's entry updated:**
+   - `matchesPlayed` +1
+   - `matchesLost` +1 (or `matchesDrawn` +1 if draw)
+   - `points` += stage's `pointsForLoss` (or `pointsForDraw`)
+   - Stats updated
+   - NRR recalculated
+
+3. **Positions recalculated:**
+   - All teams in group re-ranked
+   - `position` field updated
+
+4. **Stage status checked:**
+   - If all matches complete, stage marked as completed
+   - Qualification status may be updated
+
+## Get Qualified Teams
+
+Get teams that have qualified for the next stage.
+
+<RequestExample>
+```bash cURL
+# Get qualified teams from entire stage
+curl -X GET 'https://api.example.com/v1/tournaments/stages/65f8b2a4c1234567890stg01/qualified-teams' \
+  -H 'Content-Type: application/json'
+
+# Get top 2 teams from specific group
+curl -X GET 'https://api.example.com/v1/tournaments/stages/65f8b2a4c1234567890stg01/qualified-teams?groupId=65f8b2a4c1234567890grp01&topN=2' \
+  -H 'Content-Type: application/json'
+```
+</RequestExample>
+
+### Endpoint
+
+```
+GET /v1/tournaments/stages/{stageId}/qualified-teams
+```
+
+### Authentication
+
+<Icon icon="unlock" /> No authentication required
+
+### Path Parameters
+
+<ParamField path="stageId" type="string" required>
+  Stage ID to get qualified teams from.
+</ParamField>
+
+### Query Parameters
+
+<ParamField query="groupId" type="string">
+  Optional group ID to get qualified teams from specific group.
+</ParamField>
+
+<ParamField query="topN" type="number">
+  Number of top teams to return. If not provided, uses stage's `advancingTeamsPerGroup` value.
+</ParamField>
+
+### Response
+
+Returns array of qualified team standings (same format as points table).
+
+<ResponseExample>
+```json 200 - Success
+[
+  {
+    "position": 1,
+    "teamId": "65f8b2a4c1234567890abc01",
+    "teamName": "Mumbai Warriors",
+    "points": 6,
+    "netRunRate": 1.850,
+    "matchesPlayed": 3,
+    "matchesWon": 3,
+    "matchesLost": 0,
+    "qualificationStatus": "qualified"
+  },
+  {
+    "position": 2,
+    "teamId": "65f8b2a4c1234567890abc02",
+    "teamName": "Delhi Strikers",
+    "points": 4,
+    "netRunRate": 0.920,
+    "matchesPlayed": 3,
+    "matchesWon": 2,
+    "matchesLost": 1,
+    "qualificationStatus": "qualified"
+  }
+]
+```
+</ResponseExample>
+
+## Points Calculation Logic
+
+### Default Point Values
+
+Can be customized per stage:
+
+| Result | Points |
+|--------|--------|
+| Win | 2 |
+| Draw | 1 |
+| Loss | 0 |
+| No Result | 1 |
+| Super Over Win | 2 |
+
+### Net Run Rate Formula
+
+```
+NRR = (Total Runs Scored / Total Overs Played) - (Total Runs Conceded / Total Overs Faced)
+```
+
+**Example Calculation:**
+
+**Match 1:** Team A scored 150/8 in 20 overs, Team B scored 145/10 in 20 overs
+- Team A: (150/20) = 7.50 runs/over scored, (145/20) = 7.25 runs/over conceded
+- Team A NRR: 7.50 - 7.25 = **+0.25**
+
+**Match 2:** Team A scored 180/6 in 18 overs, Team B scored 160/10 in 20 overs  
+- Team A totals: (330/38) = 8.68 runs/over scored, (305/40) = 7.625 runs/over conceded
+- Team A NRR: 8.68 - 7.625 = **+1.055**
+
+### Ranking Tie-Breakers
+
+Teams are ranked in order of:
+
+1. **Points** (highest first)
+2. **Net Run Rate** (highest first)
+3. **Total Runs Scored** (highest first)
+4. **Matches Won** (most first)
+
+If still tied, teams share the position.
+
+## Understanding Form String
+
+The `form` field shows the last 5 match results:
+
+- **W** = Win
+- **L** = Loss  
+- **D** = Draw/Tie
+- **N** = No Result
+
+**Read right to left** (most recent first):
+
+- `"WWLWW"` = Won last 2 matches, lost 1, won 2 before that
+- `"LWWWW"` = Won last 4 matches, lost the one before that
+- `"LLLWW"` = Won last 2 matches, lost 3 before that
+
+## Automatic Qualification
+
+Qualification status is automatically updated when:
+
+1. **All group matches complete**: Top N teams marked as qualified
+2. **N = `advancingTeamsPerGroup`**: Configured in stage settings
+3. **Special case**: If single group with N=1, top team wins tournament
+
+## Next Steps
+
+1. [View tournament statistics](/api/tournaments/create#get-tournament-player-stats)
+2. [Create knockout stage](/api/tournaments/groups#create-tournament-stage) with qualified teams
+3. Track player performance with stats endpoints

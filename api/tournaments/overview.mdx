@@ -1,0 +1,241 @@
+---
+title: 'Tournament API Overview'
+description: 'Comprehensive tournament management system supporting round-robin, knockout, and hybrid formats'
+---
+
+## Introduction
+
+The Tournament API provides a complete tournament management system for organizing cricket tournaments. It supports multiple tournament formats including:
+
+- **Round Robin**: Teams play against each other in groups
+- **Knockout**: Single elimination bracket-style matches
+- **Hybrid**: Combination of group stages followed by knockout stages
+- **Point Based**: Custom point calculation systems
+
+## Tournament Architecture
+
+Tournaments are structured hierarchically:
+
+```
+Tournament
+├── Stages (Group Stage, Knockout Stage, etc.)
+│   ├── Groups (Group A, Group B, etc.)
+│   │   ├── Teams
+│   │   └── Matches
+│   └── Points Table
+└── Player Statistics
+```
+
+## Key Features
+
+### Multi-Stage Tournament Support
+
+Create tournaments with multiple stages:
+- Group stages with customizable groups
+- Knockout stages (Semi-finals, Finals, etc.)
+- Automatic progression based on points table
+- Flexible advancing teams per group configuration
+
+### Points Table Management
+
+Automatic calculation of:
+- Matches played, won, lost, drawn
+- Points based on customizable rules
+- Net Run Rate (NRR) calculation
+- Team rankings and qualification status
+- Form tracking (last 5 matches)
+- Super Over wins/losses
+
+### Group Management
+
+Flexible group organization:
+- Create multiple groups within a stage
+- Assign teams to groups
+- Configure advancing teams per group
+- Track group-level standings
+
+### Match Scheduling
+
+- Schedule matches for stages and groups
+- Auto-generate round-robin fixtures
+- Link tournament matches to match system
+- Track match outcomes and update points
+
+## Tournament Formats
+
+### Round Robin Format
+
+Each team plays against every other team in their group. Points are awarded based on match results:
+
+- **Win**: 2 points (default, configurable)
+- **Draw**: 1 point (default, configurable)
+- **Loss**: 0 points (default, configurable)
+- **No Result**: 1 point (default, configurable)
+
+Teams are ranked by:
+1. Points
+2. Net Run Rate (NRR)
+3. Total runs scored
+4. Matches won
+
+### Knockout Format
+
+Single elimination where losing teams are eliminated:
+- Semi-finals, Finals, etc.
+- Winner advances, loser is eliminated
+- Requires power-of-2 teams (2, 4, 8, 16, etc.)
+
+### Hybrid Format
+
+Combines group stages and knockout:
+1. Group stage with round-robin matches
+2. Top N teams from each group advance
+3. Knockout stage with qualified teams
+
+## Net Run Rate Calculation
+
+Net Run Rate (NRR) is calculated using the formula:
+
+```
+NRR = (Total Runs Scored / Total Overs Played) - (Total Runs Conceded / Total Overs Faced)
+```
+
+**Example:**
+- Team A scored 150 runs in 20 overs and 180 runs in 18 overs (total: 330/38)
+- Team A conceded 140 runs in 20 overs and 160 runs in 20 overs (total: 300/40)
+- NRR = (330/38) - (300/40) = 8.68 - 7.50 = **+1.18**
+
+## Qualification Logic
+
+### Automatic Winner Detection
+
+The system automatically determines the tournament winner when:
+- Single group with 1 advancing team: Top team wins
+- Knockout final completed: Winning team becomes champion
+
+### Team Progression
+
+Teams advance to next stage based on:
+- Position in points table
+- Number of advancing teams configured per group
+- All matches in stage must be completed
+
+## Tournament Status
+
+Tournaments progress through statuses:
+
+- **upcoming**: Before start date
+- **ongoing**: Between start and end dates, or has active matches
+- **completed**: All matches finished or past end date
+- **cancelled**: Manually cancelled by organizer
+
+Stages also have statuses:
+- **upcoming**: Before matches start
+- **ongoing**: Matches in progress
+- **completed**: All matches finished
+
+## API Endpoints Overview
+
+### Tournament Management
+- `POST /v1/tournaments` - Create tournament
+- `GET /v1/tournaments` - List tournaments
+- `GET /v1/tournaments/{id}` - Get tournament details
+- `PATCH /v1/tournaments/{id}` - Update tournament
+- `DELETE /v1/tournaments/{id}` - Delete tournament
+
+### Stage Management
+- `POST /v1/tournaments/{id}/stages` - Create stage
+- `GET /v1/tournaments/{id}/stages` - List stages
+- `GET /v1/tournaments/stages/{stageId}` - Get stage details
+- `PATCH /v1/tournaments/stages/{stageId}` - Update stage
+
+### Group Management
+- `POST /v1/tournaments/stages/{stageId}/groups` - Create group
+- `GET /v1/tournaments/stages/{stageId}/groups` - List groups
+- `POST /v1/tournaments/groups/{groupId}/teams` - Add team to group
+
+### Points Table & Standings
+- `GET /v1/tournaments/{id}/points-table` - Get all points tables
+- `GET /v1/tournaments/stages/{stageId}/points-table` - Get stage points table
+- `POST /v1/tournaments/matches/{matchId}/update-points` - Update points after match
+
+### Match Management
+- `POST /v1/tournaments/{id}/matches` - Schedule tournament match
+- `POST /v1/tournaments/stages/{stageId}/generate-matches` - Auto-generate fixtures
+
+### Statistics
+- `GET /v1/tournaments/{id}/player-stats` - Player statistics
+- `GET /v1/tournaments/{id}/stats/top-run-scorers` - Top batsmen
+- `GET /v1/tournaments/{id}/stats/top-wicket-takers` - Top bowlers
+
+## Authentication
+
+Most tournament endpoints require authentication. Include the JWT token in the Authorization header:
+
+```
+Authorization: Bearer <token>
+```
+
+Public endpoints (no auth required):
+- `GET /v1/tournaments/public` - Public tournaments
+- `GET /v1/tournaments/{id}` - Tournament details
+- `GET /v1/tournaments/{id}/summary` - Tournament summary
+- Points table endpoints (read-only)
+
+## Common Use Cases
+
+### Creating a Simple Tournament
+
+1. Create tournament with basic details
+2. Add teams to tournament
+3. Create a single group stage
+4. Assign teams to groups
+5. Generate round-robin matches
+6. Update points as matches complete
+
+### Creating a Hybrid Tournament
+
+1. Create tournament
+2. Add teams
+3. Create group stage with multiple groups
+4. Assign teams to groups
+5. Generate group matches
+6. After groups complete, create knockout stage
+7. System uses qualified teams automatically
+
+## Error Handling
+
+The API returns standard HTTP status codes:
+
+- `200 OK` - Successful request
+- `201 Created` - Resource created successfully
+- `400 Bad Request` - Invalid request data
+- `401 Unauthorized` - Missing or invalid token
+- `404 Not Found` - Resource not found
+- `500 Internal Server Error` - Server error
+
+Error responses include:
+
+```json
+{
+  "code": 400,
+  "message": "Validation error message"
+}
+```
+
+## Best Practices
+
+1. **Set realistic dates**: Ensure start and end dates align with match schedules
+2. **Configure points early**: Set point rules before generating matches
+3. **Complete stages sequentially**: Finish group stages before knockout
+4. **Update points after each match**: Use the update-points endpoint
+5. **Check qualification**: Verify qualified teams before creating next stage
+6. **Power-of-2 for knockout**: Ensure qualified teams are 2, 4, 8, 16, etc.
+
+## Related Resources
+
+- [Create Tournament](/api/tournaments/create) - Detailed tournament creation guide
+- [Group Management](/api/tournaments/groups) - Managing groups and teams
+- [Points Table](/api/tournaments/points-table) - Points calculation and standings
+- [Match API](/api/matches/overview) - Match management system
+- [Team API](/api/teams/overview) - Team management

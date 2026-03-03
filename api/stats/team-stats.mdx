@@ -1,0 +1,304 @@
+---
+title: 'Team Statistics'
+description: 'Calculate and retrieve team-level statistics aggregated from player data'
+---
+
+## Overview
+
+Team statistics are automatically calculated by aggregating individual player statistics from matches. The system tracks batting, bowling, and fielding performance at the team level.
+
+## Team Statistics Calculation
+
+Team stats are derived from:
+
+1. **PlayerMatchStats**: All player statistics linked to team instances
+2. **Match Results**: Wins, losses, and match outcomes
+3. **Innings Data**: Team totals from innings scoring
+
+### Data Flow
+
+```
+PlayerMatchStats → Team Instance → Team Statistics
+     ↓                  ↓
+BattingStats      Match Results
+BowlingStats      Wins/Losses
+FieldingStats     Team Totals
+```
+
+## Team Batting Statistics
+
+Aggregated from all players in the team:
+
+<ResponseField name="totalRuns" type="number">
+  Sum of all runs scored by team players
+</ResponseField>
+
+<ResponseField name="matchesPlayed" type="number">
+  Total matches played by the team
+</ResponseField>
+
+<ResponseField name="highestScore" type="number">
+  Highest team total in an innings
+</ResponseField>
+
+<ResponseField name="averageScore" type="number">
+  Average runs per match
+</ResponseField>
+
+### Top Batsmen
+
+Team's leading run scorers with:
+- Total runs
+- Batting average
+- Strike rate
+- Highest score
+
+## Team Bowling Statistics
+
+Aggregated bowling performance:
+
+<ResponseField name="totalWickets" type="number">
+  Sum of all wickets taken by team bowlers
+</ResponseField>
+
+<ResponseField name="economyRate" type="number">
+  Average runs conceded per over by team
+</ResponseField>
+
+<ResponseField name="bestBowlingFigures" type="string">
+  Best bowling figures in format "5/23" (wickets/runs)
+</ResponseField>
+
+### Top Bowlers
+
+Team's leading wicket takers with:
+- Total wickets
+- Bowling average
+- Economy rate
+- Best figures
+
+## Team Performance Metrics
+
+### Win/Loss Record
+
+<ResponseField name="wins" type="number">
+  Matches won (completed matches where team was winner)
+</ResponseField>
+
+<ResponseField name="losses" type="number">
+  Matches lost (completed matches where opponent won)
+</ResponseField>
+
+<ResponseField name="winRate" type="number">
+  Win percentage: (wins ÷ matches played) × 100
+</ResponseField>
+
+### Match Results Calculation
+
+From `admin.service.js:src/services/admin.service.js:988-1023`:
+
+```javascript
+wins: {
+  $size: {
+    $filter: {
+      input: '$teamMatches',
+      as: 'm',
+      cond: {
+        $and: [
+          { $eq: ['$$m.status', 'completed'] },
+          { $in: ['$$m.winnerTeamInstanceId', '$teamInstanceIds'] },
+        ],
+      },
+    },
+  },
+},
+losses: {
+  $size: {
+    $filter: {
+      input: '$teamMatches',
+      as: 'm',
+      cond: {
+        $and: [
+          { $eq: ['$$m.status', 'completed'] },
+          { $ne: ['$$m.winnerTeamInstanceId', null] },
+          { $not: [{ $in: ['$$m.winnerTeamInstanceId', '$teamInstanceIds'] }] },
+          // Team participated in match
+        ],
+      },
+    },
+  },
+}
+```
+
+## Team Fielding Statistics
+
+Aggregated fielding performance:
+
+<ResponseField name="totalCatches" type="number">
+  Total catches by all fielders
+</ResponseField>
+
+<ResponseField name="totalStumpings" type="number">
+  Total stumpings by wicket-keeper
+</ResponseField>
+
+<ResponseField name="totalRunOuts" type="number">
+  Total run-outs by team
+</ResponseField>
+
+## Accessing Team Statistics
+
+Team statistics are available through the Admin API:
+
+### Get Team Details
+
+```bash
+GET /v1/admin/teamDetails/:teamId
+```
+
+Returns comprehensive team statistics including:
+- Team info (name, captain, location)
+- Performance metrics (wins, losses, win rate)
+- Aggregated statistics (runs, wickets)
+- Player list with individual stats
+- Recent match history
+
+See [Admin API - User Management](/api/admin/user-management) for authentication requirements.
+
+### Get Teams List
+
+```bash
+GET /v1/admin/teams
+```
+
+Query Parameters:
+- `page`: Page number (default: 1)
+- `limit`: Results per page (default: 20)
+- `name`: Filter by team name
+- `city`: Filter by city
+- `country`: Filter by country
+- `sortBy`: Sort by wins, loss, totalRuns, or totalWickets
+
+## Player Contributions to Team Stats
+
+Each player's match statistics contribute to team totals:
+
+### Batting Contributions
+
+From `admin.service.js:src/services/admin.service.js:1758-1786`:
+
+```javascript
+totalRunsMatch: { $sum: { $ifNull: ['$batting.runScored', 0] } }
+```
+
+All batting stats from `battingStatsId` are summed per match, then aggregated across all team matches.
+
+### Bowling Contributions
+
+```javascript
+totalWicketsMatch: { $sum: { $ifNull: ['$bowling.wickets', 0] } }
+```
+
+All bowling stats from `bowlingStatsId` are summed per match.
+
+### Team Instance Linking
+
+Players are linked to teams through `teamInstanceId` in `PlayerMatchStats`. Each team instance represents a team's squad for a specific match or tournament.
+
+## Statistics Aggregation Pipeline
+
+The system uses MongoDB aggregation for efficient team stats calculation:
+
+1. **Join Team Instances**: Link team to all its instances
+2. **Join Player Stats**: Get all player match stats for team instances
+3. **Join Batting/Bowling Stats**: Populate stat details
+4. **Group by Match**: Calculate team totals per match
+5. **Aggregate Totals**: Sum across all matches
+
+From `admin.service.js:src/services/admin.service.js:1027-1072`:
+
+```javascript
+{
+  $lookup: {
+    from: 'playermatchstats',
+    let: { teamInstanceIds: '$teamInstanceIds' },
+    pipeline: [
+      { $match: { $expr: { $in: ['$teamInstanceId', '$$teamInstanceIds'] } } },
+      // Join batting and bowling stats
+      { $group: {
+          _id: null,
+          totalRuns: { $sum: { $ifNull: ['$batting.runScored', 0] } },
+          totalWickets: { $sum: { $ifNull: ['$bowling.wickets', 0] } },
+        }
+      },
+    ],
+    as: 'teamTotals',
+  },
+}
+```
+
+## Player Roles in Team Statistics
+
+Players are tracked with specific roles:
+
+- **Batter**: Primary batting contributions
+- **Bowler**: Primary bowling contributions
+- **All-rounder**: Both batting and bowling contributions
+- **Wicket-keeper**: Fielding contributions (catches, stumpings)
+
+Roles are determined from:
+- Player profile (`playingRole` field)
+- Match performance (batting/bowling stats existence)
+- Team instance position (wicket-keeper designation)
+
+## Historical Statistics
+
+Team statistics include historical data:
+
+### Recent Matches
+
+Last 5 matches with:
+- Match title
+- Date
+- Status (live, scheduled, completed)
+- Result (for completed matches)
+
+### Player History
+
+For each player in team:
+- Matches played
+- Career totals
+- Highest score
+- Best bowling figures
+
+## Statistics Updates
+
+Team statistics update automatically when:
+
+1. Player match stats are updated (via Stats API)
+2. Match is completed and result is finalized
+3. New players join team instances
+4. Statistics are recalculated for innings/matches
+
+Updates flow through the statistics calculation pipeline:
+
+```
+Ball Created → Innings Stats → Match Stats → Player Stats → Team Stats
+```
+
+## Related Endpoints
+
+- [Player Statistics](/api/stats/player-stats) - Individual player stats
+- [Admin - User Management](/api/admin/user-management) - Team management endpoints
+- [Team API](/api/team/overview) - Team creation and management
+
+## Performance Considerations
+
+Team statistics calculations are optimized:
+
+- **Aggregation Pipelines**: Use MongoDB aggregation instead of multiple queries
+- **Indexing**: Team instances and player stats are indexed
+- **Caching**: Match summaries are cached to avoid recalculation
+- **Batch Updates**: Stats updated in batches for multiple matches
+
+For large teams or many matches, statistics calculation may take several seconds. Consider using the async update endpoints from the Stats API.

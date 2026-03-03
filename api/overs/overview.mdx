@@ -1,0 +1,511 @@
+---
+title: 'Over Recording'
+description: 'Record and manage cricket overs with ball-by-ball tracking and bowler statistics'
+icon: 'circle-dot'
+---
+
+## Overview
+
+Overs represent sets of 6 legal deliveries in cricket. Each over is bowled by a single bowler to the batting team. The Overs API manages over lifecycle, bowler changes, and aggregates statistics from individual ball deliveries.
+
+### Relationship Hierarchy
+
+```
+Innings
+  └── Over (bowled by one bowler)
+      └── Balls (up to 6+ legal deliveries, extras don't count)
+```
+
+<Info>
+  An over consists of 6 legal deliveries. Wide balls and no-balls are not counted as legal deliveries, so an over can contain more than 6 total deliveries.
+</Info>
+
+## Core Endpoints
+
+### Start Over
+
+Initialize a new over with the bowler and batsmen.
+
+```bash
+POST /api/v1/overs/start
+```
+
+<ParamField body="inningId" type="string" required>
+  MongoDB ObjectId of the innings this over belongs to.
+</ParamField>
+
+<ParamField body="bowlerId" type="string" required>
+  MongoDB ObjectId of the bowler for this over.
+</ParamField>
+
+<ParamField body="batsmanId" type="string" required>
+  MongoDB ObjectId of the striker batsman.
+</ParamField>
+
+<ParamField body="nonStrikerId" type="string" required>
+  MongoDB ObjectId of the non-striker batsman.
+</ParamField>
+
+<ParamField body="overNumber" type="number" required>
+  Sequential over number in the innings (1, 2, 3, ...).
+</ParamField>
+
+<CodeGroup>
+
+```bash cURL
+curl -X POST https://api.example.com/api/v1/overs/start \
+  -H "Authorization: Bearer YOUR_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "inningId": "507f1f77bcf86cd799439011",
+    "bowlerId": "507f1f77bcf86cd799439012",
+    "batsmanId": "507f1f77bcf86cd799439013",
+    "nonStrikerId": "507f1f77bcf86cd799439014",
+    "overNumber": 1
+  }'
+```
+
+```javascript JavaScript
+const response = await fetch('https://api.example.com/api/v1/overs/start', {
+  method: 'POST',
+  headers: {
+    'Authorization': 'Bearer YOUR_TOKEN',
+    'Content-Type': 'application/json'
+  },
+  body: JSON.stringify({
+    inningId: '507f1f77bcf86cd799439011',
+    bowlerId: '507f1f77bcf86cd799439012',
+    batsmanId: '507f1f77bcf86cd799439013',
+    nonStrikerId: '507f1f77bcf86cd799439014',
+    overNumber: 1
+  })
+});
+
+const result = await response.json();
+```
+
+```python Python
+import requests
+
+response = requests.post(
+    'https://api.example.com/api/v1/overs/start',
+    headers={
+        'Authorization': 'Bearer YOUR_TOKEN',
+        'Content-Type': 'application/json'
+    },
+    json={
+        'inningId': '507f1f77bcf86cd799439011',
+        'bowlerId': '507f1f77bcf86cd799439012',
+        'batsmanId': '507f1f77bcf86cd799439013',
+        'nonStrikerId': '507f1f77bcf86cd799439014',
+        'overNumber': 1
+    }
+)
+
+result = response.json()
+```
+
+</CodeGroup>
+
+<Tip>
+  The start over response includes comprehensive match state data including current score, wickets, over status, both batsmen statistics, and recent over history.
+</Tip>
+
+### End Over
+
+Mark an over as completed and finalize statistics.
+
+```bash
+PUT /api/v1/overs/end/{id}
+```
+
+<CodeGroup>
+
+```bash cURL
+curl -X PUT https://api.example.com/api/v1/overs/end/507f1f77bcf86cd799439020 \
+  -H "Authorization: Bearer YOUR_TOKEN"
+```
+
+```javascript JavaScript
+const response = await fetch(
+  'https://api.example.com/api/v1/overs/end/507f1f77bcf86cd799439020',
+  {
+    method: 'PUT',
+    headers: {
+      'Authorization': 'Bearer YOUR_TOKEN'
+    }
+  }
+);
+
+const over = await response.json();
+```
+
+</CodeGroup>
+
+### Get Overs by Inning
+
+Retrieve all overs for a specific innings.
+
+```bash
+GET /api/v1/overs/inning/{inningId}
+```
+
+### Get Overs by Match
+
+Retrieve all overs for a match across all innings.
+
+```bash
+GET /api/v1/overs/match/{matchId}
+```
+
+Response includes innings details for each over, allowing you to distinguish between different innings.
+
+## Over Management
+
+### Change Bowler
+
+Change the bowler for the current over or create a new over if the current one is complete.
+
+```bash
+PATCH /api/v1/overs/change-bowler/{id}
+```
+
+<ParamField body="bowlerId" type="string" required>
+  MongoDB ObjectId of the new bowler.
+</ParamField>
+
+<Info>
+  If the current over has 6 legal deliveries, this endpoint automatically creates a new over with the new bowler. Otherwise, it updates the current over.
+</Info>
+
+<CodeGroup>
+
+```bash cURL
+curl -X PATCH https://api.example.com/api/v1/overs/change-bowler/507f1f77bcf86cd799439020 \
+  -H "Authorization: Bearer YOUR_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "bowlerId": "507f1f77bcf86cd799439015"
+  }'
+```
+
+```javascript JavaScript
+const response = await fetch(
+  'https://api.example.com/api/v1/overs/change-bowler/507f1f77bcf86cd799439020',
+  {
+    method: 'PATCH',
+    headers: {
+      'Authorization': 'Bearer YOUR_TOKEN',
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({
+      bowlerId: '507f1f77bcf86cd799439015'
+    })
+  }
+);
+
+const result = await response.json();
+```
+
+</CodeGroup>
+
+### Player Out
+
+Record a dismissal during the over.
+
+```bash
+PATCH /api/v1/overs/player-out/{id}
+```
+
+<ParamField body="outBatsman" type="string" required>
+  MongoDB ObjectId of the dismissed batsman.
+</ParamField>
+
+<ParamField body="nextBatsman" type="string" required>
+  MongoDB ObjectId of the incoming batsman.
+</ParamField>
+
+<ParamField body="outType" type="string" required>
+  Type of dismissal.
+  
+  Options: `bowled`, `caught`, `lbw`, `run out`, `stumped`, `hit wicket`, `retired out`, `retired hurt`, `timed out`, `hit the ball twice`, `obstructing the field`
+</ParamField>
+
+<ParamField body="dismissalType" type="string" required>
+  Classification of dismissal.
+  
+  Options: `wicket`, `retired`, `timed out`
+</ParamField>
+
+<ParamField body="fielderId" type="string">
+  MongoDB ObjectId of the fielder involved (if applicable, e.g., for caught or run out).
+</ParamField>
+
+### Undo Over
+
+Remove the last ball from an over and recalculate statistics.
+
+```bash
+DELETE /api/v1/overs/undo/{id}
+```
+
+<Warning>
+  This endpoint removes the most recent ball from the over. Use this to correct scoring errors. The over statistics are automatically recalculated.
+</Warning>
+
+## Over Statistics
+
+Each over tracks the following statistics automatically:
+
+<AccordionGroup>
+  <Accordion title="Ball Count">
+    Number of legal deliveries bowled in the over. This excludes wides and no-balls.
+  </Accordion>
+  
+  <Accordion title="Extras Count">
+    Number of deliveries that resulted in extra runs (wides, no-balls, byes, leg-byes).
+  </Accordion>
+  
+  <Accordion title="Wickets in Over">
+    Number of dismissals that occurred during the over.
+  </Accordion>
+  
+  <Accordion title="Balls Array">
+    References to all ball documents associated with this over, in chronological order.
+  </Accordion>
+</AccordionGroup>
+
+## Response Examples
+
+<Tabs>
+  <Tab title="Start Over">
+    ```json
+    {
+      "status": "success",
+      "data": {
+        "over": {
+          "_id": "507f1f77bcf86cd799439020",
+          "overNumber": 1,
+          "inningId": "507f1f77bcf86cd799439011",
+          "bowlerId": "507f1f77bcf86cd799439012",
+          "ballCount": 0,
+          "extrasCount": 0,
+          "wicketsInOver": 0,
+          "balls": [],
+          "meta": {},
+          "createdAt": "2024-03-03T12:00:00.000Z"
+        },
+        "currentScore": 0,
+        "currentWickets": 0,
+        "oversStatus": "0.0/20",
+        "strikerBatsman": {
+          "id": "507f1f77bcf86cd799439013",
+          "name": "John Doe",
+          "score": 0,
+          "ballFaced": 0
+        },
+        "nonStrikerBatsman": {
+          "id": "507f1f77bcf86cd799439014",
+          "name": "Jane Smith",
+          "score": 0,
+          "ballFaced": 0
+        },
+        "currentBowler": "Bob Johnson",
+        "currentOverId": "507f1f77bcf86cd799439020",
+        "last3Overs": [],
+        "last5Overs": [],
+        "last1Over": []
+      }
+    }
+    ```
+  </Tab>
+  
+  <Tab title="Get Overs by Inning">
+    ```json
+    {
+      "status": "success",
+      "data": [
+        {
+          "_id": "507f1f77bcf86cd799439020",
+          "overNumber": 1,
+          "inningId": "507f1f77bcf86cd799439011",
+          "bowlerId": {
+            "_id": "507f1f77bcf86cd799439012",
+            "name": "Bob Johnson"
+          },
+          "ballCount": 6,
+          "extrasCount": 1,
+          "wicketsInOver": 0,
+          "balls": [
+            "507f1f77bcf86cd799439030",
+            "507f1f77bcf86cd799439031",
+            "507f1f77bcf86cd799439032"
+          ],
+          "meta": {},
+          "createdAt": "2024-03-03T12:00:00.000Z",
+          "updatedAt": "2024-03-03T12:05:00.000Z"
+        }
+      ]
+    }
+    ```
+  </Tab>
+  
+  <Tab title="Change Bowler">
+    ```json
+    {
+      "_id": "507f1f77bcf86cd799439011",
+      "inningNumber": 1,
+      "battingTeamInstanceId": {
+        "name": "Mumbai Indians"
+      },
+      "bowlingTeamInstanceId": {
+        "name": "Chennai Super Kings"
+      },
+      "matchId": {
+        "matchConfigId": "507f1f77bcf86cd799439010"
+      },
+      "currentScore": 45,
+      "currentWickets": 2,
+      "oversStatus": "7.4/20",
+      "strikerBatsman": {
+        "id": "507f1f77bcf86cd799439013",
+        "name": "John Doe",
+        "score": 23,
+        "ballFaced": 18
+      },
+      "nonStrikerBatsman": {
+        "id": "507f1f77bcf86cd799439014",
+        "name": "Jane Smith",
+        "score": 15,
+        "ballFaced": 12
+      },
+      "currentBowler": "New Bowler Name",
+      "bowlerId": "507f1f77bcf86cd799439015",
+      "currentOverId": "507f1f77bcf86cd799439021",
+      "last3Overs": [...],
+      "last5Overs": [...],
+      "last1Over": [...]
+    }
+    ```
+  </Tab>
+</Tabs>
+
+## Cricket Rules & Validation
+
+<AccordionGroup>
+  <Accordion title="Same bowler restriction">
+    A bowler cannot bowl two consecutive overs. The API validates this when starting a new over or changing bowlers.
+  </Accordion>
+  
+  <Accordion title="Over completion">
+    An over is considered complete when it has 6 legal deliveries. Wide balls and no-balls don't count towards this total.
+  </Accordion>
+  
+  <Accordion title="Bowler spell tracking">
+    The system tracks bowler spells to ensure compliance with format-specific restrictions (e.g., maximum overs per bowler in limited-overs cricket).
+  </Accordion>
+  
+  <Accordion title="Strike rotation">
+    After completing an over, the strike automatically rotates if an odd number of runs were scored on the last legal delivery.
+  </Accordion>
+</AccordionGroup>
+
+## Best Practices
+
+<Steps>
+  <Step title="Start the over first">
+    Always call the start over endpoint before recording any balls. This initializes the over structure and validates the bowler selection.
+  </Step>
+  
+  <Step title="Record balls immediately">
+    Record each ball as soon as it's bowled for accurate real-time updates. Don't batch ball recordings.
+  </Step>
+  
+  <Step title="Handle extras correctly">
+    Remember that wides and no-balls require re-delivery, so the over continues until 6 legal deliveries are completed.
+  </Step>
+  
+  <Step title="End the over explicitly">
+    Call the end over endpoint after the 6th legal delivery to finalize statistics and prepare for the next over.
+  </Step>
+</Steps>
+
+## Common Scenarios
+
+### Recording a Standard Over
+
+```javascript
+// 1. Start the over
+const over = await startOver({
+  inningId: '507f1f77bcf86cd799439011',
+  bowlerId: '507f1f77bcf86cd799439012',
+  batsmanId: '507f1f77bcf86cd799439013',
+  nonStrikerId: '507f1f77bcf86cd799439014',
+  overNumber: 1
+});
+
+// 2. Record each ball (see Ball API)
+for (let i = 0; i < 6; i++) {
+  await recordBall({ overId: over.data.over._id, /* ... */ });
+}
+
+// 3. End the over
+await endOver(over.data.over._id);
+```
+
+### Handling a Wide Ball
+
+```javascript
+// Wide ball doesn't count as legal delivery
+await recordBall({
+  overId: '507f1f77bcf86cd799439020',
+  batsmanId: '507f1f77bcf86cd799439013',
+  nonStrikerId: '507f1f77bcf86cd799439014',
+  bowlerId: '507f1f77bcf86cd799439012',
+  runScored: 0,
+  extras: 1,
+  extraType: 'wide',
+  isLegalDelivery: false
+});
+
+// Ball counter doesn't increment, over continues
+// Requires another ball to be bowled
+```
+
+### Maiden Over (No runs)
+
+```javascript
+// Record 6 dot balls
+for (let i = 0; i < 6; i++) {
+  await recordBall({
+    overId: '507f1f77bcf86cd799439020',
+    batsmanId: '507f1f77bcf86cd799439013',
+    nonStrikerId: '507f1f77bcf86cd799439014',
+    bowlerId: '507f1f77bcf86cd799439012',
+    runScored: 0,
+    isLegalDelivery: true
+  });
+}
+
+// Over statistics will show: 0 runs, 0 wickets, 6 balls
+```
+
+## Related Resources
+
+<CardGroup cols={2}>
+  <Card title="Innings Management" icon="cricket-bat-ball" href="/api/innings/overview">
+    Manage the parent innings structure.
+  </Card>
+  
+  <Card title="Ball Recording" icon="baseball" href="/api/balls/overview">
+    Record individual ball deliveries.
+  </Card>
+  
+  <Card title="Player Statistics" icon="chart-line" href="/api/players/statistics">
+    View bowler and batsman performance metrics.
+  </Card>
+  
+  <Card title="Real-time Updates" icon="signal-stream" href="/concepts/real-time-updates">
+    Subscribe to live over and ball updates.
+  </Card>
+</CardGroup>

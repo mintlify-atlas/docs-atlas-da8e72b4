@@ -1,0 +1,663 @@
+---
+title: 'WebSocket Integration'
+description: 'Complete guide for integrating WebSocket clients with Cric PR Backend API'
+---
+
+## Overview
+
+The Cric PR Backend API provides real-time communication capabilities using Socket.IO. This guide covers how to integrate WebSocket clients for features like chat messaging, user presence, and live updates.
+
+## Server Configuration
+
+The WebSocket server is implemented using Socket.IO and can be enabled/disabled via environment variables.
+
+### Enable WebSocket Server
+
+In your `.env` file:
+
+```env
+WS_SERVER_ENABLE=true
+SOCKET_PORT=3001
+```
+
+<ParamField path="WS_SERVER_ENABLE" type="boolean" default="false">
+  Enable or disable the WebSocket server
+</ParamField>
+
+<ParamField path="SOCKET_PORT" type="number" default="5002">
+  Port number for the WebSocket server
+</ParamField>
+
+### Server Implementation
+
+The WebSocket server is configured in `src/services/socket.service.js` with CORS enabled:
+
+```javascript
+io = socketIo(server, {
+  cors: {
+    origin: '*',
+    methods: ['GET', 'POST'],
+    credentials: true,
+  },
+});
+```
+
+## Client Setup
+
+### Installation
+
+Install the Socket.IO client library:
+
+<Tabs>
+  <Tab title="npm">
+    ```bash
+    npm install socket.io-client
+    ```
+  </Tab>
+  
+  <Tab title="yarn">
+    ```bash
+    yarn add socket.io-client
+    ```
+  </Tab>
+  
+  <Tab title="CDN">
+    ```html
+    <script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
+    ```
+  </Tab>
+</Tabs>
+
+### Basic Connection
+
+<Tabs>
+  <Tab title="JavaScript">
+    ```javascript
+    import io from 'socket.io-client';
+    
+    const socket = io('http://localhost:3001', {
+      transports: ['websocket'],
+      reconnection: true,
+      reconnectionDelay: 1000,
+      reconnectionAttempts: 5
+    });
+    
+    // Connection events
+    socket.on('connect', () => {
+      console.log('Connected to WebSocket server');
+    });
+    
+    socket.on('disconnect', () => {
+      console.log('Disconnected from WebSocket server');
+    });
+    
+    socket.on('connect_error', (error) => {
+      console.error('Connection error:', error);
+    });
+    ```
+  </Tab>
+  
+  <Tab title="React">
+    ```jsx
+    import { useEffect, useState } from 'react';
+    import io from 'socket.io-client';
+    
+    function App() {
+      const [socket, setSocket] = useState(null);
+      
+      useEffect(() => {
+        const newSocket = io('http://localhost:3001');
+        setSocket(newSocket);
+        
+        newSocket.on('connect', () => {
+          console.log('Connected');
+        });
+        
+        return () => newSocket.close();
+      }, []);
+      
+      return <div>Your app</div>;
+    }
+    ```
+  </Tab>
+  
+  <Tab title="React Native">
+    ```javascript
+    import io from 'socket.io-client';
+    
+    const socket = io('http://localhost:3001', {
+      transports: ['websocket'],
+      jsonp: false
+    });
+    
+    socket.on('connect', () => {
+      console.log('Connected to server');
+    });
+    ```
+  </Tab>
+</Tabs>
+
+## Events Reference
+
+### User Presence
+
+#### Join Active Users
+
+<ParamField path="active" type="event">
+  Emit when user becomes active
+  
+  **Payload:**
+  ```javascript
+  socket.emit('active', userId);
+  ```
+  
+  **Response:**
+  Server emits `activeUsers` event to all clients
+</ParamField>
+
+#### Get Active Users
+
+<ParamField path="activeUsers" type="event">
+  Request list of currently active users
+  
+  **Emit:**
+  ```javascript
+  socket.emit('activeUsers');
+  ```
+  
+  **Listen:**
+  ```javascript
+  socket.on('activeUsers', (users) => {
+    console.log('Active users:', users);
+    // users = [{
+    //   id: '123',
+    //   name: 'John Doe',
+    //   email: 'john@example.com',
+    //   profilePicture: 'https://...'
+    // }]
+  });
+  ```
+</ParamField>
+
+### Chat Operations
+
+#### Join Chat Room
+
+<ParamField path="join" type="event">
+  Join a specific chat room
+  
+  **Payload:**
+  ```javascript
+  socket.emit('join', {
+    userId: 'user123',
+    chatId: 'chat456'
+  });
+  ```
+  
+  After joining, you'll receive messages for this chat room.
+</ParamField>
+
+#### Private Message
+
+<ParamField path="privateMessage" type="event">
+  Send a private message in a chat
+  
+  **Emit:**
+  ```javascript
+  socket.emit('privateMessage', {
+    chatId: 'chat456',
+    senderId: 'user123',
+    message: 'Hello!',
+    content_type: 'text',
+    isBot: false
+  });
+  ```
+  
+  **Listen:**
+  ```javascript
+  socket.on('privateMessage', (data) => {
+    console.log('New message:', data);
+    // data = {
+    //   message: 'Hello!',
+    //   time: '2024-03-03T10:30:00Z',
+    //   sender_id: 'user123',
+    //   read: false,
+    //   isBot: false,
+    //   content_type: 'text'
+    // }
+  });
+  ```
+  
+  **Content Types:**
+  - `text` - Text message
+  - `image` - Image URL
+  - `file` - File URL
+</ParamField>
+
+#### Group Message
+
+<ParamField path="groupMessage" type="event">
+  Send a message to a group chat
+  
+  **Emit:**
+  ```javascript
+  socket.emit('groupMessage', {
+    chatId: 'chat789',
+    senderId: 'user123',
+    message: 'Hello everyone!',
+    content_type: 'text'
+  });
+  ```
+  
+  **Listen:**
+  ```javascript
+  socket.on('groupMessage', (data) => {
+    console.log('Group message:', data);
+  });
+  ```
+</ParamField>
+
+#### Edit Message
+
+<ParamField path="editMessage" type="event">
+  Edit an existing message
+  
+  **Emit:**
+  ```javascript
+  socket.emit('editMessage', {
+    messageId: 'msg123',
+    newContent: 'Updated message content'
+  });
+  ```
+  
+  **Listen:**
+  ```javascript
+  socket.on('editMessage', (data) => {
+    console.log('Message edited:', data);
+  });
+  ```
+</ParamField>
+
+### Typing Indicators
+
+<ParamField path="typing" type="event">
+  Notify others that user is typing
+  
+  **Emit:**
+  ```javascript
+  socket.emit('typing', chatId);
+  ```
+  
+  **Listen:**
+  ```javascript
+  socket.on('typing', ({ user }) => {
+    console.log(`${user} is typing...`);
+  });
+  ```
+</ParamField>
+
+<ParamField path="stopTyping" type="event">
+  Notify others that user stopped typing
+  
+  **Emit:**
+  ```javascript
+  socket.emit('stopTyping', chatId);
+  ```
+  
+  **Listen:**
+  ```javascript
+  socket.on('stopTyping', ({ user }) => {
+    console.log(`${user} stopped typing`);
+  });
+  ```
+</ParamField>
+
+### Chat Status
+
+<ParamField path="checkStatus" type="event">
+  Check if a chat is active/available
+  
+  **Emit:**
+  ```javascript
+  socket.emit('checkStatus', chatId);
+  ```
+  
+  **Listen:**
+  ```javascript
+  socket.on('checkStatus', ({ status }) => {
+    if (status) {
+      console.log('Chat is active');
+    } else {
+      console.log('Chat is inactive');
+    }
+  });
+  ```
+</ParamField>
+
+### Batch Subscriptions
+
+<ParamField path="subscribeToBatch" type="event">
+  Subscribe to updates for a specific batch
+  
+  **Emit:**
+  ```javascript
+  socket.emit('subscribeToBatch', batchId);
+  ```
+</ParamField>
+
+## Complete Example
+
+### React Chat Component
+
+```jsx
+import React, { useEffect, useState } from 'react';
+import io from 'socket.io-client';
+
+function ChatComponent({ userId, chatId }) {
+  const [socket, setSocket] = useState(null);
+  const [messages, setMessages] = useState([]);
+  const [inputMessage, setInputMessage] = useState('');
+  const [isTyping, setIsTyping] = useState(false);
+  const [activeUsers, setActiveUsers] = useState([]);
+
+  useEffect(() => {
+    // Initialize socket connection
+    const newSocket = io('http://localhost:3001');
+    setSocket(newSocket);
+
+    // Connection events
+    newSocket.on('connect', () => {
+      console.log('Connected to WebSocket');
+      
+      // Join chat room
+      newSocket.emit('join', { userId, chatId });
+      
+      // Mark user as active
+      newSocket.emit('active', userId);
+      
+      // Get active users
+      newSocket.emit('activeUsers');
+    });
+
+    // Listen for active users
+    newSocket.on('activeUsers', (users) => {
+      setActiveUsers(users);
+    });
+
+    // Listen for private messages
+    newSocket.on('privateMessage', (data) => {
+      setMessages(prev => [...prev, data]);
+    });
+
+    // Listen for typing indicators
+    newSocket.on('typing', ({ user }) => {
+      setIsTyping(true);
+    });
+
+    newSocket.on('stopTyping', ({ user }) => {
+      setIsTyping(false);
+    });
+
+    // Cleanup on unmount
+    return () => {
+      newSocket.close();
+    };
+  }, [userId, chatId]);
+
+  const sendMessage = () => {
+    if (!socket || !inputMessage.trim()) return;
+
+    socket.emit('privateMessage', {
+      chatId,
+      senderId: userId,
+      message: inputMessage,
+      content_type: 'text',
+      isBot: false
+    });
+
+    setInputMessage('');
+  };
+
+  const handleTyping = () => {
+    if (socket) {
+      socket.emit('typing', chatId);
+      
+      // Stop typing after 2 seconds of inactivity
+      setTimeout(() => {
+        socket.emit('stopTyping', chatId);
+      }, 2000);
+    }
+  };
+
+  return (
+    <div className="chat-container">
+      <div className="active-users">
+        <h3>Active Users ({activeUsers.length})</h3>
+        {activeUsers.map(user => (
+          <div key={user.id}>
+            <img src={user.profilePicture} alt={user.name} />
+            <span>{user.name}</span>
+          </div>
+        ))}
+      </div>
+
+      <div className="messages">
+        {messages.map((msg, index) => (
+          <div key={index} className="message">
+            <span>{msg.sender_id}: </span>
+            <span>{msg.message}</span>
+            <small>{new Date(msg.time).toLocaleTimeString()}</small>
+          </div>
+        ))}
+        {isTyping && <div className="typing-indicator">Someone is typing...</div>}
+      </div>
+
+      <div className="input-area">
+        <input
+          type="text"
+          value={inputMessage}
+          onChange={(e) => {
+            setInputMessage(e.target.value);
+            handleTyping();
+          }}
+          onKeyPress={(e) => e.key === 'Enter' && sendMessage()}
+          placeholder="Type a message..."
+        />
+        <button onClick={sendMessage}>Send</button>
+      </div>
+    </div>
+  );
+}
+
+export default ChatComponent;
+```
+
+## Best Practices
+
+<AccordionGroup>
+  <Accordion title="Handle reconnection gracefully">
+    ```javascript
+    const socket = io('http://localhost:3001', {
+      reconnection: true,
+      reconnectionDelay: 1000,
+      reconnectionDelayMax: 5000,
+      reconnectionAttempts: 5
+    });
+    
+    socket.on('reconnect', (attemptNumber) => {
+      console.log('Reconnected after', attemptNumber, 'attempts');
+      // Re-join rooms or re-subscribe to events
+      socket.emit('join', { userId, chatId });
+    });
+    ```
+  </Accordion>
+
+  <Accordion title="Clean up listeners">
+    ```javascript
+    useEffect(() => {
+      const handleMessage = (data) => {
+        console.log(data);
+      };
+      
+      socket.on('privateMessage', handleMessage);
+      
+      return () => {
+        socket.off('privateMessage', handleMessage);
+      };
+    }, []);
+    ```
+  </Accordion>
+
+  <Accordion title="Implement heartbeat/ping">
+    ```javascript
+    socket.on('connect', () => {
+      setInterval(() => {
+        socket.emit('ping');
+      }, 30000); // Every 30 seconds
+    });
+    ```
+  </Accordion>
+
+  <Accordion title="Handle offline messages">
+    ```javascript
+    // Queue messages when offline
+    const messageQueue = [];
+    
+    socket.on('disconnect', () => {
+      // Store messages locally
+    });
+    
+    socket.on('connect', () => {
+      // Send queued messages
+      messageQueue.forEach(msg => {
+        socket.emit('privateMessage', msg);
+      });
+      messageQueue.length = 0;
+    });
+    ```
+  </Accordion>
+
+  <Accordion title="Optimize for mobile">
+    ```javascript
+    // Use WebSocket transport only (faster on mobile)
+    const socket = io('http://localhost:3001', {
+      transports: ['websocket'],
+      upgrade: false,
+      rememberUpgrade: true
+    });
+    ```
+  </Accordion>
+</AccordionGroup>
+
+## Troubleshooting
+
+### Connection Issues
+
+**Problem**: Client cannot connect to WebSocket server
+
+**Solutions**:
+- Verify `WS_SERVER_ENABLE=true` in `.env`
+- Check server is running on correct port
+- Verify CORS settings allow your domain
+- Check firewall/network settings
+- Try using polling transport: `transports: ['polling', 'websocket']`
+
+### Messages Not Received
+
+**Problem**: Emitted messages not reaching other clients
+
+**Solutions**:
+- Ensure you've joined the chat room with `join` event
+- Verify chatId is correct
+- Check server logs for errors
+- Confirm user has permission to access chat
+
+### High Latency
+
+**Problem**: Delayed message delivery
+
+**Solutions**:
+- Use WebSocket transport only (avoid polling)
+- Check network connection quality
+- Monitor server load and scale if needed
+- Consider using Redis pub/sub for horizontal scaling
+
+## Security Considerations
+
+<Warning>
+  **Important**: Implement proper authentication before production deployment
+</Warning>
+
+### Authenticate Connections
+
+```javascript
+// Server-side
+io.use((socket, next) => {
+  const token = socket.handshake.auth.token;
+  if (isValidToken(token)) {
+    next();
+  } else {
+    next(new Error('Authentication error'));
+  }
+});
+```
+
+```javascript
+// Client-side
+const socket = io('http://localhost:3001', {
+  auth: {
+    token: 'your-jwt-token'
+  }
+});
+```
+
+### Validate Message Content
+
+```javascript
+// Server-side: Sanitize message content
+const sanitizeHtml = require('sanitize-html');
+
+socket.on('privateMessage', ({ message, ...data }) => {
+  const cleanMessage = sanitizeHtml(message);
+  // Process clean message
+});
+```
+
+### Rate Limiting
+
+```javascript
+// Implement rate limiting to prevent spam
+const rateLimit = new Map();
+
+socket.on('privateMessage', (data) => {
+  const userId = data.senderId;
+  const now = Date.now();
+  const userLimit = rateLimit.get(userId) || { count: 0, resetTime: now };
+  
+  if (now > userLimit.resetTime) {
+    userLimit.count = 1;
+    userLimit.resetTime = now + 60000; // 1 minute
+  } else {
+    userLimit.count++;
+  }
+  
+  if (userLimit.count > 10) {
+    socket.emit('error', 'Rate limit exceeded');
+    return;
+  }
+  
+  rateLimit.set(userId, userLimit);
+  // Process message
+});
+```
+
+## Related Guides
+
+<CardGroup cols={2}>
+  <Card title="Environment Variables" icon="gear" href="/guides/environment-variables">
+    Configure WebSocket server settings
+  </Card>
+  <Card title="Setup Guide" icon="rocket" href="/guides/setup">
+    Complete application setup
+  </Card>
+</CardGroup>

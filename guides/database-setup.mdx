@@ -1,0 +1,342 @@
+---
+title: 'Database Setup'
+description: 'MongoDB setup and configuration for Cric PR Backend API'
+---
+
+## Overview
+
+The Cric PR Backend API uses MongoDB as its primary database, with Mongoose as the ODM (Object Document Mapper). This guide covers both local MongoDB setup and MongoDB Atlas cloud configuration.
+
+## MongoDB Atlas (Recommended)
+
+MongoDB Atlas is the recommended option for production environments.
+
+<Steps>
+  <Step title="Create MongoDB Atlas account">
+    Sign up for a free account at [MongoDB Atlas](https://www.mongodb.com/cloud/atlas)
+  </Step>
+
+  <Step title="Create a new cluster">
+    1. Click "Build a Cluster"
+    2. Choose your preferred cloud provider and region
+    3. Select cluster tier (M0 free tier available)
+    4. Click "Create Cluster"
+  </Step>
+
+  <Step title="Create database user">
+    1. Go to "Database Access" in the left sidebar
+    2. Click "Add New Database User"
+    3. Choose authentication method (Username/Password)
+    4. Set username and password
+    5. Grant appropriate privileges (e.g., "Read and write to any database")
+    6. Click "Add User"
+  </Step>
+
+  <Step title="Configure network access">
+    1. Go to "Network Access" in the left sidebar
+    2. Click "Add IP Address"
+    3. Add your application server's IP address
+    4. For development, you can use `0.0.0.0/0` (allows access from anywhere)
+    
+    <Warning>
+      Using `0.0.0.0/0` is convenient for development but not recommended for production
+    </Warning>
+  </Step>
+
+  <Step title="Get connection string">
+    1. Click "Connect" on your cluster
+    2. Choose "Connect your application"
+    3. Select "Node.js" as driver and version "4.1 or later"
+    4. Copy the connection string
+  </Step>
+
+  <Step title="Configure in .env file">
+    Add the connection string to your `.env` file:
+    
+    ```env
+    MONGODB_URL=mongodb://username:password@cluster-shard-00-00.mongodb.net:27017,cluster-shard-00-01.mongodb.net:27017,cluster-shard-00-02.mongodb.net:27017/?ssl=true&replicaSet=atlas-xxxxx-shard-0&authSource=admin&retryWrites=true&w=majority&appName=Cluster0
+    ```
+    
+    Replace:
+    - `username` - Your database username
+    - `password` - Your database password
+    - Cluster endpoints with your actual cluster addresses
+  </Step>
+</Steps>
+
+## Local MongoDB Setup
+
+For development environments, you can use a local MongoDB instance.
+
+<Steps>
+  <Step title="Install MongoDB">
+    **macOS (using Homebrew):**
+    ```bash
+    brew tap mongodb/brew
+    brew install mongodb-community
+    ```
+    
+    **Ubuntu/Debian:**
+    ```bash
+    wget -qO - https://www.mongodb.org/static/pgp/server-6.0.asc | sudo apt-key add -
+    echo "deb [ arch=amd64,arm64 ] https://repo.mongodb.org/apt/ubuntu focal/mongodb-org/6.0 multiverse" | sudo tee /etc/apt/sources.list.d/mongodb-org-6.0.list
+    sudo apt-get update
+    sudo apt-get install -y mongodb-org
+    ```
+    
+    **Windows:**
+    Download and install from [MongoDB Download Center](https://www.mongodb.com/try/download/community)
+  </Step>
+
+  <Step title="Start MongoDB service">
+    **macOS:**
+    ```bash
+    brew services start mongodb-community
+    ```
+    
+    **Linux:**
+    ```bash
+    sudo systemctl start mongod
+    sudo systemctl enable mongod
+    ```
+    
+    **Windows:**
+    MongoDB runs as a Windows service after installation
+  </Step>
+
+  <Step title="Verify MongoDB is running">
+    ```bash
+    mongosh
+    ```
+    
+    You should see the MongoDB shell prompt. Type `exit` to quit.
+  </Step>
+
+  <Step title="Configure in .env file">
+    Add the local connection string to your `.env` file:
+    
+    ```env
+    MONGODB_URL=mongodb://localhost:27017/cricpr
+    ```
+    
+    The database name `cricpr` will be created automatically when the application starts.
+  </Step>
+</Steps>
+
+## Connection String Format
+
+MongoDB connection strings follow this format:
+
+### Standard Format
+
+```
+mongodb://[username:password@]host[:port][/database][?options]
+```
+
+### Replica Set Format (Atlas)
+
+```
+mongodb://[username:password@]host1[:port1],host2[:port2],host3[:port3][/database][?options]
+```
+
+### Common Options
+
+- `ssl=true` - Use SSL/TLS encryption
+- `replicaSet=<name>` - Replica set name
+- `authSource=admin` - Authentication database
+- `retryWrites=true` - Automatically retry failed writes
+- `w=majority` - Write concern (wait for majority of replicas)
+- `appName=<name>` - Application identifier
+
+## Configuration in Code
+
+The MongoDB configuration is managed in `src/config/config.js`:
+
+```javascript
+mongoose: {
+  url: envVars.MONGODB_URL + (envVars.NODE_ENV === 'test' ? '-test' : ''),
+}
+```
+
+<Note>
+  In test environment, the system automatically appends `-test` to the database name to avoid conflicts with development data.
+</Note>
+
+## Database Models
+
+The application uses Mongoose models located in `src/models/`. Common models include:
+
+- **User** - User accounts and authentication
+- **Chat** - Chat conversations
+- **Message** - Chat messages
+- **Activity** - User activity tracking
+
+Models are automatically loaded and indexed when the application starts.
+
+## Seeding the Database
+
+Populate your database with initial data:
+
+```bash
+# Run all seeders
+npm run seed:all
+
+# Run specific seeder
+npm run seed
+```
+
+Seeder files are located in `src/seeders/`.
+
+## Database Utilities
+
+### Create Users and Teams
+
+```bash
+npm run create-users-teams
+```
+
+### Cleanup Users and Teams
+
+```bash
+npm run cleanup-users-teams
+```
+
+### Update Statistics
+
+```bash
+npm run update-stats
+```
+
+## Monitoring and Management
+
+### MongoDB Atlas
+
+- **Metrics**: View real-time performance metrics in Atlas dashboard
+- **Alerts**: Set up alerts for database issues
+- **Backups**: Automatic backups (available on paid tiers)
+- **Performance Advisor**: Get optimization recommendations
+
+### Local MongoDB
+
+Use MongoDB Compass for GUI-based management:
+
+1. Download [MongoDB Compass](https://www.mongodb.com/products/compass)
+2. Connect using: `mongodb://localhost:27017`
+3. Browse collections, run queries, and analyze performance
+
+## Best Practices
+
+<AccordionGroup>
+  <Accordion title="Use indexes for frequently queried fields">
+    Define indexes in your Mongoose schemas to improve query performance:
+    
+    ```javascript
+    userSchema.index({ email: 1 });
+    userSchema.index({ createdAt: -1 });
+    ```
+  </Accordion>
+
+  <Accordion title="Enable connection pooling">
+    Mongoose handles connection pooling automatically. For production, you may want to adjust pool size:
+    
+    ```javascript
+    mongoose.connect(url, {
+      maxPoolSize: 10,
+      minPoolSize: 2
+    });
+    ```
+  </Accordion>
+
+  <Accordion title="Handle connection errors gracefully">
+    The application should handle connection failures and retry automatically. Monitor logs for connection issues.
+  </Accordion>
+
+  <Accordion title="Use separate databases for different environments">
+    - Development: `cricpr-dev`
+    - Staging: `cricpr-staging`
+    - Production: `cricpr`
+    - Testing: `cricpr-test` (automatic)
+  </Accordion>
+
+  <Accordion title="Regular backups">
+    For production:
+    - Use MongoDB Atlas automated backups
+    - Or set up `mongodump` cron jobs for local instances
+    
+    ```bash
+    mongodump --uri="mongodb://localhost:27017/cricpr" --out=/path/to/backup
+    ```
+  </Accordion>
+</AccordionGroup>
+
+## Troubleshooting
+
+### Connection Timeout
+
+**Problem**: Application fails to connect to MongoDB
+
+**Solutions**:
+- Verify MongoDB is running: `mongosh` (local) or check Atlas dashboard
+- Check network connectivity and firewall rules
+- Verify IP whitelist in Atlas
+- Ensure credentials are correct
+
+### Authentication Failed
+
+**Problem**: `MongoServerError: Authentication failed`
+
+**Solutions**:
+- Verify username and password in connection string
+- Check user permissions in MongoDB Atlas
+- Ensure `authSource` is set correctly (usually `admin`)
+
+### Database Not Found
+
+**Problem**: Database doesn't exist
+
+**Solution**: MongoDB creates databases automatically when you first write data. Run the application and it will create the database.
+
+### Slow Queries
+
+**Problem**: Database queries are slow
+
+**Solutions**:
+- Add indexes to frequently queried fields
+- Use MongoDB Atlas Performance Advisor
+- Analyze queries using `explain()` in MongoDB shell
+- Consider upgrading cluster tier (Atlas)
+
+## Environment-Specific Configuration
+
+### Development
+
+```env
+NODE_ENV=development
+MONGODB_URL=mongodb://localhost:27017/cricpr-dev
+```
+
+### Production
+
+```env
+NODE_ENV=production
+MONGODB_URL=mongodb://username:password@cluster.mongodb.net:27017/?ssl=true&replicaSet=atlas-shard-0&authSource=admin&retryWrites=true&w=majority
+```
+
+### Testing
+
+```env
+NODE_ENV=test
+MONGODB_URL=mongodb://localhost:27017/cricpr
+# Automatically becomes cricpr-test
+```
+
+## Related Guides
+
+<CardGroup cols={2}>
+  <Card title="Environment Variables" icon="gear" href="/guides/environment-variables">
+    Configure MONGODB_URL variable
+  </Card>
+  <Card title="Setup Guide" icon="rocket" href="/guides/setup">
+    Complete application setup
+  </Card>
+</CardGroup>

@@ -1,0 +1,800 @@
+---
+title: Authentication
+description: Learn how Cric PR Backend API implements JWT-based authentication with Passport.js
+---
+
+## Overview
+
+Cric PR Backend API uses **JWT (JSON Web Tokens)** for stateless authentication, implemented with **Passport.js** and the `passport-jwt` strategy. This approach provides secure, scalable authentication without server-side session storage.
+
+<Info>
+  The authentication system supports multiple login methods: email/password, phone/password, Google OAuth, and Apple Sign-In.
+</Info>
+
+## Authentication Flow
+
+<Steps>
+  <Step title="User Registration or Login">
+    Users register with credentials or login with existing accounts. The system validates credentials and creates/retrieves the user.
+  </Step>
+  
+  <Step title="Token Generation">
+    Upon successful authentication, the server generates two JWT tokens:
+    - **Access Token**: Short-lived token for API requests (60 minutes)
+    - **Refresh Token**: Long-lived token for obtaining new access tokens (30 days)
+  </Step>
+  
+  <Step title="Making Authenticated Requests">
+    Clients include the access token in the `Authorization` header using Bearer authentication:
+    ```
+    Authorization: Bearer <access_token>
+    ```
+  </Step>
+  
+  <Step title="Token Verification">
+    The server extracts and verifies the JWT token from the request header. If valid, the user object is attached to the request.
+  </Step>
+  
+  <Step title="Token Refresh">
+    When the access token expires, clients use the refresh token to obtain a new access token without re-authenticating.
+  </Step>
+</Steps>
+
+## JWT Strategy Implementation
+
+The API uses Passport.js with a custom JWT strategy configured in `src/config/passport.js`:
+
+```javascript src/config/passport.js
+const { Strategy: JwtStrategy, ExtractJwt } = require('passport-jwt');
+const config = require('./config');
+const { tokenTypes } = require('./tokens');
+const { User } = require('../models');
+
+const jwtOptions = {
+  secretOrKey: config.jwt.secret,
+  jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
+};
+
+const jwtVerify = async (payload, done) => {
+  try {
+    // Verify token type is ACCESS
+    if (payload.type !== tokenTypes.ACCESS) {
+      throw new Error('Invalid token type');
+    }
+    
+    // Find user by ID from token payload
+    const user = await User.findById(payload.sub);
+    if (!user) {
+      return done(null, false);
+    }
+    
+    done(null, user);
+  } catch (error) {
+    done(error, false);
+  }
+};
+
+const jwtStrategy = new JwtStrategy(jwtOptions, jwtVerify);
+```
+
+<Note>
+  The JWT strategy extracts tokens from the `Authorization` header as Bearer tokens and verifies them against the configured secret.
+</Note>
+
+## Token Types
+
+The API uses four distinct token types defined in `src/config/tokens.js`:
+
+```javascript src/config/tokens.js
+const tokenTypes = {
+  ACCESS: 'access',           // For API authentication
+  REFRESH: 'refresh',         // For obtaining new access tokens
+  RESET_PASSWORD: 'resetPassword',  // For password reset flow
+  VERIFY_EMAIL: 'verifyEmail'      // For email verification
+};
+```
+
+<CardGroup cols={2}>
+  <Card title="Access Token" icon="key">
+    **Purpose**: Authenticate API requests
+    
+    **Lifespan**: 60 minutes (configurable via `JWT_ACCESS_EXPIRATION_MINUTES`)
+    
+    **Usage**: Included in `Authorization` header for protected endpoints
+    
+    **Storage**: Not stored in database (stateless)
+  </Card>
+  
+  <Card title="Refresh Token" icon="rotate">
+    **Purpose**: Obtain new access tokens without re-login
+    
+    **Lifespan**: 30 days (configurable via `JWT_REFRESH_EXPIRATION_DAYS`)
+    
+    **Usage**: Sent to `/auth/refresh-tokens` endpoint
+    
+    **Storage**: Stored in database with user reference
+  </Card>
+  
+  <Card title="Reset Password Token" icon="lock">
+    **Purpose**: Authorize password reset operations
+    
+    **Lifespan**: 10 minutes (configurable)
+    
+    **Usage**: Sent via email, used with `/auth/reset-password`
+    
+    **Storage**: Stored in database, blacklisted after use
+  </Card>
+  
+  <Card title="Verify Email Token" icon="envelope">
+    **Purpose**: Confirm email ownership
+    
+    **Lifespan**: 10 minutes (configurable)
+    
+    **Usage**: Contains hashed OTP, used with `/auth/verify-email`
+    
+    **Storage**: Stored in database with OTP hash
+  </Card>
+</CardGroup>
+
+## Token Generation
+
+Tokens are generated using the `jsonwebtoken` library in `src/services/token.service.js`:
+
+```javascript src/services/token.service.js
+const jwt = require('jsonwebtoken');
+const moment = require('moment');
+
+/**
+ * Generate a JWT token
+ */
+const generateToken = (userId, expires, type, secret = config.jwt.secret) => {
+  const payload = {
+    sub: userId,              // Subject (user ID)
+    iat: moment().unix(),     // Issued at time
+    exp: expires.unix(),      // Expiration time
+    type,                     // Token type
+  };
+  return jwt.sign(payload, secret);
+};
+
+/**
+ * Generate access and refresh tokens
+ */
+const generateAuthTokens = async (user) => {
+  // Generate access token (short-lived)
+  const accessTokenExpires = moment().add(
+    config.jwt.accessExpirationMinutes, 
+    'minutes'
+  );
+  const accessToken = generateToken(
+    user.id, 
+    accessTokenExpires, 
+    tokenTypes.ACCESS
+  );
+
+  // Generate refresh token (long-lived)
+  const refreshTokenExpires = moment().add(
+    config.jwt.refreshExpirationDays, 
+    'days'
+  );
+  const refreshToken = generateToken(
+    user.id, 
+    refreshTokenExpires, 
+    tokenTypes.REFRESH
+  );
+  
+  // Store refresh token in database
+  await saveToken(refreshToken, user.id, refreshTokenExpires, tokenTypes.REFRESH);
+
+  return {
+    access: {
+      token: accessToken,
+      expires: accessTokenExpires.toDate(),
+    },
+    refresh: {
+      token: refreshToken,
+      expires: refreshTokenExpires.toDate(),
+    },
+  };
+};
+```
+
+<Warning>
+  The JWT secret (`JWT_SECRET` environment variable) must be kept secure and never exposed in client-side code or public repositories.
+</Warning>
+
+## Authentication Middleware
+
+Protected routes use the `auth()` middleware defined in `src/middlewares/auth.js`:
+
+```javascript src/middlewares/auth.js
+const passport = require('passport');
+const httpStatus = require('http-status');
+const ApiError = require('../utils/ApiError');
+const { User } = require('../models');
+
+const verifyCallback = (req, resolve, reject) => async (err, user, info) => {
+  if (err || info || !user) {
+    return reject(new ApiError(httpStatus.UNAUTHORIZED, 'Please authenticate'));
+  }
+
+  try {
+    // Fetch full user with populated roles and permissions
+    const fullUser = await User.findById(user._id).populate({
+      path: 'roles',
+      populate: { path: 'permissions' },
+    });
+
+    if (!fullUser) {
+      return reject(new ApiError(httpStatus.UNAUTHORIZED, 'User not found'));
+    }
+
+    req.user = fullUser;  // Attach user to request
+    resolve();
+  } catch (error) {
+    reject(new ApiError(httpStatus.INTERNAL_SERVER_ERROR, 'User population failed'));
+  }
+};
+
+const auth = () => async (req, res, next) => {
+  return new Promise((resolve, reject) => {
+    passport.authenticate('jwt', { session: false }, verifyCallback(req, resolve, reject))(req, res, next);
+  })
+    .then(() => next())
+    .catch((err) => next(err));
+};
+```
+
+<Info>
+  The middleware automatically populates the user's roles and permissions, making them available throughout the request lifecycle.
+</Info>
+
+## Authentication Endpoints
+
+### Register New User
+
+<CodeGroup>
+```bash cURL
+curl -X POST http://localhost:3000/v1/auth/register \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "John Doe",
+    "email": "john@example.com",
+    "password": "password123",
+    "role": "user"
+  }'
+```
+
+```javascript JavaScript
+const register = async (name, email, password) => {
+  const response = await fetch('http://localhost:3000/v1/auth/register', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ name, email, password, role: 'user' })
+  });
+  return await response.json();
+};
+```
+</CodeGroup>
+
+**Implementation**: `src/controllers/auth.controller.js:10-26`
+
+```javascript
+const register = catchAsync(async (req, res) => {
+  const role = await roleService.getRoleByName(req.body.role);
+  const user = await userService.createUser({ ...req.body, roles: [role._id] });
+  const playerProfile = await playerService.createPlayerProfile({ 
+    userId: user._id, 
+    shortName: user.name 
+  });
+  
+  // Check profile completeness and set initial status
+  const complete = isProfileComplete(user, playerProfile);
+  const initialStatus = complete ? 'active' : 'incomplete_profile';
+  await playerService.updatePlayerById(playerProfile.id, { status: initialStatus });
+  
+  const tokens = await tokenService.generateAuthTokens(user);
+  const updatedPlayerProfile = await playerService.getPlayerProfileByUserId(user._id);
+  
+  res.status(httpStatus.CREATED).send({ user, tokens, playerProfile: updatedPlayerProfile });
+});
+```
+
+**Response**:
+```json
+{
+  "user": { "_id": "...", "name": "John Doe", "email": "john@example.com" },
+  "tokens": {
+    "access": { "token": "eyJhbGc...", "expires": "2026-03-03T11:15:30.000Z" },
+    "refresh": { "token": "eyJhbGc...", "expires": "2026-04-02T10:15:30.000Z" }
+  },
+  "playerProfile": { "_id": "...", "userId": "...", "status": "incomplete_profile" }
+}
+```
+
+### Login with Email or Phone
+
+<CodeGroup>
+```bash Email Login
+curl -X POST http://localhost:3000/v1/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{
+    "email": "john@example.com",
+    "password": "password123"
+  }'
+```
+
+```bash Phone Login
+curl -X POST http://localhost:3000/v1/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{
+    "phone": "92332206715",
+    "password": "password123",
+    "fcmToken": "optional-fcm-token-for-notifications"
+  }'
+```
+</CodeGroup>
+
+**Implementation**: `src/controllers/auth.controller.js:28-64`
+
+```javascript
+const login = catchAsync(async (req, res) => {
+  const { email, phone, password, fcmToken } = req.body;
+
+  if (!email && !phone) {
+    return res.status(400).send({ message: 'Email or phone is required.' });
+  }
+
+  // Support both email and phone login
+  const user = phone
+    ? await authService.loginUserWithPhone(phone, password, fcmToken)
+    : await authService.loginUserWithEmailAndPassword(email, password, fcmToken);
+
+  const tokens = await tokenService.generateAuthTokens(user);
+  
+  // Update fcmToken if provided and check profile completeness
+  let refreshedUser = user;
+  if (fcmToken) {
+    refreshedUser = await userService.updateUserById(user.id, { fcmToken });
+  }
+  
+  const playerProfile = await playerService.getPlayerProfileByUserId(user._id);
+  res.send({ user: refreshedUser, tokens, playerProfile });
+});
+```
+
+<Note>
+  The login endpoint automatically checks profile completeness and updates the player status to either `active` or `incomplete_profile`.
+</Note>
+
+### Refresh Access Token
+
+<CodeGroup>
+```bash cURL
+curl -X POST http://localhost:3000/v1/auth/refresh-tokens \
+  -H "Content-Type: application/json" \
+  -d '{
+    "refreshToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+  }'
+```
+
+```javascript JavaScript
+const refreshAccessToken = async (refreshToken) => {
+  const response = await fetch('http://localhost:3000/v1/auth/refresh-tokens', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ refreshToken })
+  });
+  
+  const tokens = await response.json();
+  
+  // Update stored tokens
+  localStorage.setItem('accessToken', tokens.access.token);
+  localStorage.setItem('refreshToken', tokens.refresh.token);
+  
+  return tokens;
+};
+```
+</CodeGroup>
+
+**Response**:
+```json
+{
+  "access": {
+    "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+    "expires": "2026-03-03T12:15:30.000Z"
+  },
+  "refresh": {
+    "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+    "expires": "2026-04-02T11:15:30.000Z"
+  }
+}
+```
+
+### Logout
+
+<CodeGroup>
+```bash cURL
+curl -X POST http://localhost:3000/v1/auth/logout \
+  -H "Content-Type: application/json" \
+  -d '{
+    "refreshToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+  }'
+```
+
+```javascript JavaScript
+const logout = async (refreshToken) => {
+  await fetch('http://localhost:3000/v1/auth/logout', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ refreshToken })
+  });
+  
+  // Clear local storage
+  localStorage.removeItem('accessToken');
+  localStorage.removeItem('refreshToken');
+};
+```
+</CodeGroup>
+
+**Implementation**: `src/controllers/auth.controller.js:84-87`
+
+The logout endpoint blacklists the refresh token, preventing it from being used to generate new access tokens.
+
+## OAuth Authentication
+
+The API supports social authentication via Google and Apple.
+
+### Google OAuth
+
+<CodeGroup>
+```bash cURL
+curl -X POST http://localhost:3000/v1/auth/google \
+  -H "Content-Type: application/json" \
+  -d '{
+    "token": "google-oauth-access-token",
+    "fcmToken": "optional-fcm-token"
+  }'
+```
+
+```javascript JavaScript
+const googleLogin = async (googleToken) => {
+  const response = await fetch('http://localhost:3000/v1/auth/google', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ 
+      token: googleToken,
+      fcmToken: 'device-fcm-token'  // Optional
+    })
+  });
+  
+  const { user, tokens, playerProfile } = await response.json();
+  return { user, tokens, playerProfile };
+};
+```
+</CodeGroup>
+
+**Implementation**: `src/controllers/auth.controller.js:142-146`
+
+### Apple Sign-In
+
+<CodeGroup>
+```bash cURL
+curl -X POST http://localhost:3000/v1/auth/apple \
+  -H "Content-Type: application/json" \
+  -d '{
+    "token": "apple-identity-token",
+    "fullName": "John Doe",
+    "fcmToken": "optional-fcm-token"
+  }'
+```
+
+```javascript JavaScript
+const appleLogin = async (identityToken, fullName) => {
+  const response = await fetch('http://localhost:3000/v1/auth/apple', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ 
+      token: identityToken,
+      fullName: fullName,
+      fcmToken: 'device-fcm-token'  // Optional
+    })
+  });
+  
+  const { user, tokens, playerProfile } = await response.json();
+  return { user, tokens, playerProfile };
+};
+```
+</CodeGroup>
+
+**Implementation**: `src/controllers/auth.controller.js:136-140`
+
+<Info>
+  OAuth endpoints automatically create a new account if the user doesn't exist, or login if they do. 
+  The `provider` field in the user model tracks the authentication method (`google` or `apple`).
+</Info>
+
+## Password Reset Flow
+
+The API implements a secure two-step password reset process using OTP verification.
+
+<Steps>
+  <Step title="Request Password Reset">
+    Send email to receive OTP:
+    
+    ```bash
+    curl -X POST http://localhost:3000/v1/auth/forgot-password \
+      -H "Content-Type: application/json" \
+      -d '{ "email": "john@example.com" }'
+    ```
+    
+    **Response**: `{ "token": "hashed-token" }`
+    
+    Implementation: `src/controllers/auth.controller.js:94-102`
+  </Step>
+  
+  <Step title="Verify OTP">
+    Submit the OTP received via email:
+    
+    ```bash
+    curl -X POST http://localhost:3000/v1/auth/verify-password \
+      -H "Content-Type: application/json" \
+      -d '{ "token": "hashed-token", "otp": "123456" }'
+    ```
+    
+    **Response**: `{ "token": "reset-password-token" }`
+  </Step>
+  
+  <Step title="Reset Password">
+    Use the reset token to set a new password:
+    
+    ```bash
+    curl -X POST "http://localhost:3000/v1/auth/reset-password?token=reset-token" \
+      -H "Content-Type: application/json" \
+      -d '{ "password": "newPassword123" }'
+    ```
+    
+    Implementation: `src/controllers/auth.controller.js:104-107`
+  </Step>
+</Steps>
+
+<Warning>
+  In development mode, the OTP is always `123456` for testing purposes. In production, a random 6-digit code is generated.
+</Warning>
+
+## Email Verification
+
+New users can verify their email addresses using the OTP flow:
+
+<Steps>
+  <Step title="Request Verification Email">
+    ```bash
+    curl -X POST http://localhost:3000/v1/auth/send-verification-email \
+      -H "Authorization: Bearer YOUR_ACCESS_TOKEN"
+    ```
+    
+    **Response**: `{ "token": "verification-token" }`
+  </Step>
+  
+  <Step title="Submit OTP">
+    ```bash
+    curl -X POST http://localhost:3000/v1/auth/verify-email \
+      -H "Content-Type: application/json" \
+      -d '{ "token": "verification-token", "otp": "123456" }'
+    ```
+    
+    **Response**: `{ "user": { ..., "isEmailVerified": true } }`
+    
+    Implementation: `src/controllers/auth.controller.js:122-127`
+  </Step>
+</Steps>
+
+## Security Best Practices
+
+<CardGroup cols={2}>
+  <Card title="Token Storage" icon="database">
+    **Client-Side:**
+    - Store access tokens in memory or sessionStorage (not localStorage for sensitive apps)
+    - Store refresh tokens in httpOnly cookies when possible
+    - Never expose tokens in URLs or logs
+    
+    **Server-Side:**
+    - Refresh tokens are stored in MongoDB with user reference
+    - Tokens can be blacklisted upon logout
+    - Expired tokens are automatically invalidated
+  </Card>
+  
+  <Card title="Password Requirements" icon="lock">
+    Passwords must meet these criteria:
+    - Minimum 8 characters
+    - At least one letter (a-z or A-Z)
+    - At least one number (0-9)
+    
+    Enforced by Joi validation in `src/validations/auth.validation.js`
+  </Card>
+  
+  <Card title="Token Expiration" icon="clock">
+    **Access Tokens**: 60 minutes
+    - Short-lived to minimize security risk
+    - Must be refreshed regularly
+    
+    **Refresh Tokens**: 30 days
+    - Longer-lived for better UX
+    - Stored in database for revocation
+  </Card>
+  
+  <Card title="Rate Limiting" icon="shield">
+    The API implements rate limiting on authentication endpoints:
+    - Prevents brute force attacks
+    - Configurable via `express-rate-limit`
+    - Returns 429 status when limit exceeded
+  </Card>
+</CardGroup>
+
+## Environment Configuration
+
+Configure JWT settings via environment variables:
+
+```bash .env
+# JWT Secret (use a strong random string in production)
+JWT_SECRET=your-super-secret-jwt-key-change-this-in-production
+
+# Token expiration times
+JWT_ACCESS_EXPIRATION_MINUTES=60
+JWT_REFRESH_EXPIRATION_DAYS=30
+JWT_RESET_PASSWORD_EXPIRATION_MINUTES=10
+JWT_VERIFY_EMAIL_EXPIRATION_MINUTES=10
+```
+
+<Warning>
+  **Critical Security Notes:**
+  - Use a strong, randomly generated `JWT_SECRET` in production
+  - Never commit `.env` files to version control
+  - Rotate secrets periodically
+  - Use different secrets for different environments
+</Warning>
+
+## Error Handling
+
+The authentication system returns standard HTTP error codes:
+
+| Status Code | Error | Description |
+|-------------|-------|-------------|
+| `400` | Bad Request | Invalid request body or validation failed |
+| `401` | Unauthorized | Invalid credentials or expired token |
+| `403` | Forbidden | Valid token but insufficient permissions |
+| `404` | Not Found | User or resource not found |
+| `500` | Internal Server Error | Server-side error during authentication |
+
+### Common Error Responses
+
+<CodeGroup>
+```json Invalid Credentials
+{
+  "code": 401,
+  "message": "Invalid email or password"
+}
+```
+
+```json Token Expired
+{
+  "code": 401,
+  "message": "Please authenticate"
+}
+```
+
+```json Invalid Token Type
+{
+  "code": 401,
+  "message": "Invalid token type"
+}
+```
+
+```json Validation Error
+{
+  "code": 400,
+  "message": "\"password\" must be at least 8 characters"
+}
+```
+</CodeGroup>
+
+## Testing Authentication
+
+Here's a complete example for testing the authentication flow:
+
+```javascript Testing Suite
+const BASE_URL = 'http://localhost:3000/v1';
+
+// Test registration
+async function testRegistration() {
+  const response = await fetch(`${BASE_URL}/auth/register`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      name: 'Test User',
+      email: 'test@example.com',
+      password: 'password123',
+      role: 'user'
+    })
+  });
+  
+  const data = await response.json();
+  console.log('Registration:', data);
+  return data.tokens;
+}
+
+// Test login
+async function testLogin() {
+  const response = await fetch(`${BASE_URL}/auth/login`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      email: 'test@example.com',
+      password: 'password123'
+    })
+  });
+  
+  const data = await response.json();
+  console.log('Login:', data);
+  return data.tokens;
+}
+
+// Test authenticated request
+async function testAuthenticatedRequest(accessToken) {
+  const response = await fetch(`${BASE_URL}/users/me`, {
+    headers: { 'Authorization': `Bearer ${accessToken}` }
+  });
+  
+  const user = await response.json();
+  console.log('User:', user);
+  return user;
+}
+
+// Test token refresh
+async function testTokenRefresh(refreshToken) {
+  const response = await fetch(`${BASE_URL}/auth/refresh-tokens`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ refreshToken })
+  });
+  
+  const tokens = await response.json();
+  console.log('Refreshed tokens:', tokens);
+  return tokens;
+}
+
+// Run tests
+(async () => {
+  try {
+    // Register or login
+    const tokens = await testLogin();
+    
+    // Make authenticated request
+    await testAuthenticatedRequest(tokens.access.token);
+    
+    // Refresh tokens
+    await testTokenRefresh(tokens.refresh.token);
+    
+    console.log('All tests passed!');
+  } catch (error) {
+    console.error('Test failed:', error);
+  }
+})();
+```
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="API Reference" icon="book" href="/api/auth/overview">
+    Explore all available authenticated endpoints
+  </Card>
+  <Card title="Match Management" icon="trophy" href="/api/matches/overview">
+    Learn about creating and managing cricket matches
+  </Card>
+  <Card title="Real-Time Updates" icon="shield" href="/concepts/real-time-updates">
+    Implement real-time scoring in your application
+  </Card>
+  <Card title="Setup Guide" icon="gear" href="/guides/setup">
+    Complete setup and configuration instructions
+  </Card>
+</CardGroup>

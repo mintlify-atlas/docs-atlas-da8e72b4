@@ -1,0 +1,212 @@
+---
+title: 'Register User'
+api: 'POST /v1/auth/register'
+description: 'Register a new user account with email and password'
+---
+
+## Endpoint
+
+```
+POST /v1/auth/register
+```
+
+## Request Body
+
+<ParamField body="email" type="string" required>
+  User's email address. Must be a valid email format and unique in the system.
+</ParamField>
+
+<ParamField body="password" type="string" required>
+  User's password. Must be at least 8 characters long and contain at least 1 letter and 1 number.
+</ParamField>
+
+<ParamField body="name" type="string" required>
+  User's full name or display name.
+</ParamField>
+
+<ParamField body="role" type="string" default="user">
+  User role. Currently only accepts `"user"` as a valid value. Defaults to `"user"` if not provided.
+</ParamField>
+
+<ParamField body="fcmToken" type="string">
+  Firebase Cloud Messaging token for push notifications. Optional. Can be empty string or null.
+</ParamField>
+
+## Response
+
+<ResponseField name="user" type="object">
+  User object containing account information
+  
+  <Expandable title="user properties">
+    <ResponseField name="id" type="string">
+      Unique user identifier (MongoDB ObjectId)
+    </ResponseField>
+    
+    <ResponseField name="email" type="string">
+      User's email address
+    </ResponseField>
+    
+    <ResponseField name="name" type="string">
+      User's full name
+    </ResponseField>
+    
+    <ResponseField name="role" type="string">
+      User role (always "user" for registration)
+    </ResponseField>
+    
+    <ResponseField name="isEmailVerified" type="boolean">
+      Whether the user's email has been verified (false by default)
+    </ResponseField>
+    
+    <ResponseField name="provider" type="string">
+      Authentication provider ("local" for email/password registration)
+    </ResponseField>
+    
+    <ResponseField name="roles" type="array">
+      Array of role IDs assigned to the user
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+<ResponseField name="tokens" type="object">
+  Authentication tokens for the user
+  
+  <Expandable title="tokens properties">
+    <ResponseField name="access" type="object">
+      Access token information
+      
+      <Expandable title="access properties">
+        <ResponseField name="token" type="string">
+          JWT access token string. Valid for 30 minutes.
+        </ResponseField>
+        
+        <ResponseField name="expires" type="string">
+          ISO 8601 datetime when the access token expires
+        </ResponseField>
+      </Expandable>
+    </ResponseField>
+    
+    <ResponseField name="refresh" type="object">
+      Refresh token information
+      
+      <Expandable title="refresh properties">
+        <ResponseField name="token" type="string">
+          JWT refresh token string. Valid for 30 days.
+        </ResponseField>
+        
+        <ResponseField name="expires" type="string">
+          ISO 8601 datetime when the refresh token expires
+        </ResponseField>
+      </Expandable>
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+<ResponseField name="playerProfile" type="object">
+  Player profile object created for the user
+  
+  <Expandable title="playerProfile properties">
+    <ResponseField name="id" type="string">
+      Player profile ID
+    </ResponseField>
+    
+    <ResponseField name="userId" type="string">
+      Reference to the user ID
+    </ResponseField>
+    
+    <ResponseField name="shortName" type="string">
+      Short name derived from user's name
+    </ResponseField>
+    
+    <ResponseField name="status" type="string">
+      Profile status: "active" if complete, "incomplete_profile" if missing required fields
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+## Example Request
+
+```bash
+curl -X POST https://api.cricpr.com/v1/auth/register \
+  -H "Content-Type: application/json" \
+  -d '{
+    "email": "john.doe@example.com",
+    "password": "SecurePass123",
+    "name": "John Doe",
+    "role": "user",
+    "fcmToken": "eXaMpLeFcMtOkEn123"
+  }'
+```
+
+## Example Response
+
+<ResponseExample>
+```json 201 - Created
+{
+  "user": {
+    "id": "67a2596cd3defa11b079b943",
+    "email": "john.doe@example.com",
+    "name": "John Doe",
+    "role": "user",
+    "isEmailVerified": false,
+    "provider": "local",
+    "roles": ["67a2596cd3defa11b079b940"]
+  },
+  "tokens": {
+    "access": {
+      "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI2N2EyNTk2Y2QzZGVmYTExYjA3OWI5NDMiLCJpYXQiOjE3Mzg4NDU2NTIsImV4cCI6MTczODg0NzQ1MiwidHlwZSI6ImFjY2VzcyJ9.xQ7Y8Z9wRvN3KpL2MnB4TfG6Hj5sD1A",
+      "expires": "2026-03-03T15:19:10.722Z"
+    },
+    "refresh": {
+      "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI2N2EyNTk2Y2QzZGVmYTExYjA3OWI5NDMiLCJpYXQiOjE3Mzg4NDU2NTIsImV4cCI6MTc0MTQzNzY1MiwidHlwZSI6InJlZnJlc2gifQ.pK8mN7vT2sJ9QzR4Lx6eH3oY1fW5",
+      "expires": "2026-04-02T14:49:10.722Z"
+    }
+  },
+  "playerProfile": {
+    "id": "67a2596cd3defa11b079b944",
+    "userId": "67a2596cd3defa11b079b943",
+    "shortName": "John Doe",
+    "status": "incomplete_profile"
+  }
+}
+```
+
+```json 400 - Email Already Exists
+{
+  "code": 400,
+  "message": "Email already taken"
+}
+```
+
+```json 400 - Validation Error
+{
+  "code": 400,
+  "message": "password must be at least 8 characters"
+}
+```
+</ResponseExample>
+
+## Error Responses
+
+<ResponseField name="400" type="error">
+  **Bad Request** - Validation error or email already exists
+  
+  Common causes:
+  - Email already registered
+  - Password doesn't meet requirements (minimum 8 characters, at least 1 letter and 1 number)
+  - Invalid email format
+  - Missing required fields
+</ResponseField>
+
+<ResponseField name="500" type="error">
+  **Internal Server Error** - Server-side error occurred during registration
+</ResponseField>
+
+## Notes
+
+- The endpoint automatically creates a player profile for the user after successful registration
+- Profile status is set to "incomplete_profile" initially and changes to "active" once all required profile fields are filled
+- Access tokens expire after 30 minutes and refresh tokens expire after 30 days
+- Email verification is not required to complete registration but recommended for account security
+- The `fcmToken` is optional but recommended for enabling push notifications
+- Role validation ensures only "user" role can be assigned during registration

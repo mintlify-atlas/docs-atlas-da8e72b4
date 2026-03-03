@@ -1,0 +1,309 @@
+---
+title: 'Team Invitations'
+description: 'Invite players and manage team membership requests'
+---
+
+<Note>
+The Cric PR Backend uses a direct player assignment model. Team creators can add or remove players directly without a formal invitation system. This page documents the available roster management operations.
+</Note>
+
+## Team Membership Model
+
+In Cric PR, team membership is managed through direct player assignment:
+
+1. **Team Creator** - The player who creates the team (stored in `createdBy`)
+2. **Team Captain** - Designated leader of the team (stored in `captain`)
+3. **Team Players** - All players in the roster (stored in `players` array)
+
+### Permissions
+
+- **Team Creator**: Can manage all team operations including:
+  - Update team details (name, logo, location)
+  - Add/remove players
+  - Set team captain
+  - Delete the team
+
+- **Team Members**: Can view team details but cannot modify roster or settings
+
+## Adding Players to Team
+
+<api-endpoint method="POST" path="/v1/teams/{teamId}/players/add" authenticated />
+
+Directly add a player to the team roster. Requires team creator authentication.
+
+### Path Parameters
+
+<ParamField path="teamId" type="string" required>
+  Team ID
+</ParamField>
+
+### Request Body
+
+<ParamField body="playerId" type="string" required>
+  Player ID to add to the team roster
+</ParamField>
+
+### Response
+
+Returns the updated team object with the new player added.
+
+<RequestExample>
+```bash cURL
+curl -X POST https://api.cricpr.com/v1/teams/688a38f0fea3456a96402a30/players/add \
+  -H "Authorization: Bearer YOUR_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "playerId": "688cb06818c2232abefa254e"
+  }'
+```
+</RequestExample>
+
+<ResponseExample>
+```json Response
+{
+  "id": "688a38f0fea3456a96402a30",
+  "name": "Karachi Kings",
+  "location": "Karachi, Pakistan",
+  "players": [
+    {
+      "id": "688cb06818c2232abefa254e",
+      "userId": "6887d2f86e607c4c48b33c65",
+      "shortName": "Ahmed Khan",
+      "battingStyle": "Right-hand bat",
+      "bowlingStyle": "Right-arm fast",
+      "isVerified": true,
+      "status": "active"
+    }
+  ],
+  "captain": {
+    "id": "688cb06818c2232abefa254e"
+  },
+  "createdBy": "6887d2f86e607c4c48b33c67"
+}
+```
+</ResponseExample>
+
+---
+
+## Removing Players from Team
+
+<api-endpoint method="POST" path="/v1/teams/{teamId}/players/remove" authenticated />
+
+Remove a player from the team roster. Requires team creator authentication.
+
+### Path Parameters
+
+<ParamField path="teamId" type="string" required>
+  Team ID
+</ParamField>
+
+### Request Body
+
+<ParamField body="playerId" type="string" required>
+  Player ID to remove from the team roster
+</ParamField>
+
+### Response
+
+Returns the updated team object with the player removed.
+
+<RequestExample>
+```bash cURL
+curl -X POST https://api.cricpr.com/v1/teams/688a38f0fea3456a96402a30/players/remove \
+  -H "Authorization: Bearer YOUR_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "playerId": "688cb06818c2232abefa254e"
+  }'
+```
+</RequestExample>
+
+---
+
+## Setting Team Captain
+
+<api-endpoint method="POST" path="/v1/teams/{teamId}/captain" authenticated />
+
+Designate a player as team captain. The player must already be in the team roster.
+
+### Path Parameters
+
+<ParamField path="teamId" type="string" required>
+  Team ID
+</ParamField>
+
+### Request Body
+
+<ParamField body="playerId" type="string" required>
+  Player ID to set as captain (must be in team roster)
+</ParamField>
+
+### Response
+
+Returns the updated team object with new captain assigned.
+
+<RequestExample>
+```bash cURL
+curl -X POST https://api.cricpr.com/v1/teams/688a38f0fea3456a96402a30/captain \
+  -H "Authorization: Bearer YOUR_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "playerId": "688cb06818c2232abefa254e"
+  }'
+```
+</RequestExample>
+
+<ResponseExample>
+```json Response
+{
+  "id": "688a38f0fea3456a96402a30",
+  "name": "Karachi Kings",
+  "captain": {
+    "id": "688cb06818c2232abefa254e",
+    "userId": "6887d2f86e607c4c48b33c65",
+    "shortName": "Ahmed Khan",
+    "battingStyle": "Right-hand bat",
+    "bowlingStyle": "Right-arm fast"
+  },
+  "players": [
+    {
+      "id": "688cb06818c2232abefa254e",
+      "shortName": "Ahmed Khan"
+    }
+  ]
+}
+```
+</ResponseExample>
+
+---
+
+## Creating Team with Players
+
+When creating a team, you can include players and set captain in the initial request:
+
+<RequestExample>
+```bash cURL
+curl -X POST https://api.cricpr.com/v1/teams \
+  -H "Authorization: Bearer YOUR_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "Lahore Lions",
+    "location": "Lahore, Pakistan",
+    "logo": "https://example.com/logo.png",
+    "players": [
+      "player_id_1",
+      "player_id_2",
+      "player_id_3"
+    ],
+    "captain": "player_id_1",
+    "includeMyself": true
+  }'
+```
+</RequestExample>
+
+### includeMyself Parameter
+
+The `includeMyself` parameter automatically adds the authenticated user (their player profile) to the team roster:
+
+- Set to `true` to auto-add yourself to the team
+- Set to `false` or omit to create team without adding yourself
+- Prevents duplicates if your player ID is already in the `players` array
+
+---
+
+## Getting Team Players
+
+<api-endpoint method="GET" path="/v1/teams/{teamId}/players" />
+
+Retrieve all players in a team with pagination.
+
+### Path Parameters
+
+<ParamField path="teamId" type="string" required>
+  Team ID
+</ParamField>
+
+### Query Parameters
+
+<ParamField query="page" type="integer" default="1">
+  Page number
+</ParamField>
+
+<ParamField query="limit" type="integer" default="10">
+  Number of results per page
+</ParamField>
+
+<ParamField query="sortBy" type="string">
+  Sort field (e.g., "shortName:asc", "createdAt:desc")
+</ParamField>
+
+### Response
+
+Returns paginated list of players with full player details.
+
+<RequestExample>
+```bash cURL
+curl "https://api.cricpr.com/v1/teams/688a38f0fea3456a96402a30/players?page=1&limit=20"
+```
+</RequestExample>
+
+<ResponseExample>
+```json Response
+{
+  "results": [
+    {
+      "id": "688cb06818c2232abefa254e",
+      "userId": {
+        "id": "6887d2f86e607c4c48b33c65",
+        "name": "Ahmed Khan",
+        "email": "ahmed@example.com"
+      },
+      "shortName": "Ahmed Khan",
+      "battingStyle": "Right-hand bat",
+      "bowlingStyle": "Right-arm fast",
+      "playingRole": "Batsman",
+      "isVerified": true,
+      "status": "active"
+    }
+  ],
+  "page": 1,
+  "limit": 20,
+  "totalPages": 1,
+  "totalResults": 11
+}
+```
+</ResponseExample>
+
+---
+
+## Best Practices
+
+### Team Creation Flow
+
+1. **Create the team** with initial players and captain
+2. **Add additional players** as needed using the add player endpoint
+3. **Set or update captain** when team leadership changes
+4. **Remove players** who leave the team
+
+### Permission Checks
+
+- Always verify that the authenticated user is the team creator before allowing modifications
+- Ensure players exist and are active before adding to team
+- Verify captain is in the team roster before setting
+
+### Player Management
+
+- Use `includeMyself: true` when creating a team to automatically join
+- Check for duplicate players before adding to avoid errors
+- Remove captain assignment before removing a player who is currently captain
+
+---
+
+## Error Handling
+
+Common errors when managing team membership:
+
+- `400 Bad Request` - Player already in team, or captain not in roster
+- `401 Unauthorized` - Not authenticated or not team creator
+- `404 Not Found` - Team or player not found
+- `403 Forbidden` - Insufficient permissions to modify team

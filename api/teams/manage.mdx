@@ -1,0 +1,596 @@
+---
+title: 'Team Management'
+description: 'Create, update, delete, and manage team operations'
+---
+
+## Create Team
+
+<api-endpoint method="POST" path="/v1/teams" authenticated />
+
+Create a new cricket team.
+
+### Request Body
+
+<ParamField body="name" type="string" required>
+  Team name (must be unique)
+</ParamField>
+
+<ParamField body="location" type="string" required>
+  Team location (e.g., "Karachi, Pakistan")
+</ParamField>
+
+<ParamField body="logo" type="string">
+  URL to team logo image
+</ParamField>
+
+<ParamField body="players" type="array">
+  Array of player IDs to add to the team
+</ParamField>
+
+<ParamField body="captain" type="string">
+  Player ID to set as team captain (must be in players array)
+</ParamField>
+
+<ParamField body="includeMyself" type="boolean" default="false">
+  Automatically add the authenticated user to the team roster
+</ParamField>
+
+### Response
+
+<ResponseField name="id" type="string">
+  Team ID
+</ResponseField>
+
+<ResponseField name="name" type="string">
+  Team name
+</ResponseField>
+
+<ResponseField name="location" type="string">
+  Team location
+</ResponseField>
+
+<ResponseField name="logo" type="string">
+  Team logo URL
+</ResponseField>
+
+<ResponseField name="createdBy" type="string">
+  Player ID of team creator
+</ResponseField>
+
+<ResponseField name="captain" type="object">
+  Captain player object
+</ResponseField>
+
+<ResponseField name="players" type="array">
+  Array of player objects
+</ResponseField>
+
+<RequestExample>
+```bash cURL
+curl -X POST https://api.cricpr.com/v1/teams \
+  -H "Authorization: Bearer YOUR_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "Atnest 11",
+    "logo": "https://example.com/logo.svg",
+    "location": "Karachi, Pakistan",
+    "players": [
+      "688cb06818c2232abefa254e",
+      "688ca807fd71e61ed611f227",
+      "688cb1e218c2232abefa2584"
+    ],
+    "captain": "688cb06818c2232abefa254e",
+    "includeMyself": true
+  }'
+```
+</RequestExample>
+
+<ResponseExample>
+```json Response
+{
+  "id": "688a38f0fea3456a96402a30",
+  "name": "Atnest 11",
+  "logo": "https://example.com/logo.svg",
+  "location": "Karachi, Pakistan",
+  "createdBy": "6887d2f86e607c4c48b33c67",
+  "captain": {
+    "id": "688cb06818c2232abefa254e",
+    "userId": "6887d2f86e607c4c48b33c65",
+    "shortName": "John Doe",
+    "battingStyle": "Right-hand bat",
+    "bowlingStyle": "Right-arm fast"
+  },
+  "players": [
+    {
+      "id": "688cb06818c2232abefa254e",
+      "userId": "6887d2f86e607c4c48b33c65",
+      "shortName": "John Doe",
+      "battingStyle": "Right-hand bat",
+      "bowlingStyle": "Right-arm fast"
+    }
+  ],
+  "createdAt": "2024-01-15T10:30:00Z",
+  "updatedAt": "2024-01-15T10:30:00Z"
+}
+```
+</ResponseExample>
+
+---
+
+## Get Teams
+
+<api-endpoint method="GET" path="/v1/teams" authenticated />
+
+Retrieve a paginated list of teams with optional filters.
+
+### Query Parameters
+
+<ParamField query="name" type="string">
+  Filter by team name
+</ParamField>
+
+<ParamField query="location" type="string">
+  Filter by location
+</ParamField>
+
+<ParamField query="captain" type="string">
+  Filter by captain player ID
+</ParamField>
+
+<ParamField query="myteam" type="boolean">
+  Filter to show only teams created by or including the authenticated user
+</ParamField>
+
+<ParamField query="opponents" type="boolean">
+  Filter to show teams that have played against the user's teams
+</ParamField>
+
+<ParamField query="page" type="integer" default="1">
+  Page number for pagination
+</ParamField>
+
+<ParamField query="limit" type="integer" default="10">
+  Number of results per page (max: 100)
+</ParamField>
+
+<ParamField query="sortBy" type="string">
+  Sort field and order (e.g., "name:asc", "createdAt:desc")
+</ParamField>
+
+### Response
+
+<ResponseField name="results" type="array">
+  Array of team objects
+</ResponseField>
+
+<ResponseField name="page" type="integer">
+  Current page number
+</ResponseField>
+
+<ResponseField name="limit" type="integer">
+  Results per page
+</ResponseField>
+
+<ResponseField name="totalPages" type="integer">
+  Total number of pages
+</ResponseField>
+
+<ResponseField name="totalResults" type="integer">
+  Total number of teams matching filters
+</ResponseField>
+
+<RequestExample>
+```bash cURL
+curl -X GET "https://api.cricpr.com/v1/teams?page=1&limit=10&sortBy=name:asc" \
+  -H "Authorization: Bearer YOUR_TOKEN"
+```
+</RequestExample>
+
+<ResponseExample>
+```json Response
+{
+  "results": [
+    {
+      "id": "688a38f0fea3456a96402a30",
+      "name": "Codefied 11",
+      "location": "Johar, Karachi, Pakistan",
+      "logo": "https://example.com/logo.png",
+      "captain": {
+        "id": "6887d2f86e607c4c48b33c67",
+        "shortName": "Ali Khan"
+      },
+      "players": [
+        {
+          "id": "6887d2f86e607c4c48b33c67",
+          "shortName": "Ali Khan",
+          "battingStyle": "Left-hand bat"
+        }
+      ]
+    }
+  ],
+  "page": 1,
+  "limit": 10,
+  "totalPages": 1,
+  "totalResults": 1
+}
+```
+</ResponseExample>
+
+---
+
+## Get Team
+
+<api-endpoint method="GET" path="/v1/teams/{teamId}" />
+
+Get a specific team by ID.
+
+### Path Parameters
+
+<ParamField path="teamId" type="string" required>
+  Team ID
+</ParamField>
+
+### Response
+
+Returns a team object with populated captain and players.
+
+<RequestExample>
+```bash cURL
+curl https://api.cricpr.com/v1/teams/688a38f0fea3456a96402a30
+```
+</RequestExample>
+
+---
+
+## Update Team
+
+<api-endpoint method="PATCH" path="/v1/teams/{teamId}" authenticated />
+
+Update team details. Only team creator can update.
+
+### Path Parameters
+
+<ParamField path="teamId" type="string" required>
+  Team ID
+</ParamField>
+
+### Request Body
+
+<ParamField body="name" type="string">
+  Update team name (must be unique)
+</ParamField>
+
+<ParamField body="location" type="string">
+  Update team location
+</ParamField>
+
+<ParamField body="logo" type="string">
+  Update team logo URL
+</ParamField>
+
+<ParamField body="players" type="array">
+  Update players array (replaces existing)
+</ParamField>
+
+<ParamField body="captain" type="string">
+  Update captain player ID
+</ParamField>
+
+### Response
+
+Returns the updated team object.
+
+<RequestExample>
+```bash cURL
+curl -X PATCH https://api.cricpr.com/v1/teams/688a38f0fea3456a96402a30 \
+  -H "Authorization: Bearer YOUR_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "Karachi Strikers",
+    "location": "Karachi, Sindh, Pakistan"
+  }'
+```
+</RequestExample>
+
+---
+
+## Delete Team
+
+<api-endpoint method="DELETE" path="/v1/teams/{teamId}" authenticated />
+
+Permanently delete a team. Only team creator can delete.
+
+### Path Parameters
+
+<ParamField path="teamId" type="string" required>
+  Team ID
+</ParamField>
+
+### Response
+
+Returns `204 No Content` on success.
+
+<RequestExample>
+```bash cURL
+curl -X DELETE https://api.cricpr.com/v1/teams/688a38f0fea3456a96402a30 \
+  -H "Authorization: Bearer YOUR_TOKEN"
+```
+</RequestExample>
+
+---
+
+## Get Team Players
+
+<api-endpoint method="GET" path="/v1/teams/{teamId}/players" />
+
+Get paginated list of players in a team.
+
+### Path Parameters
+
+<ParamField path="teamId" type="string" required>
+  Team ID
+</ParamField>
+
+### Query Parameters
+
+<ParamField query="page" type="integer" default="1">
+  Page number
+</ParamField>
+
+<ParamField query="limit" type="integer" default="10">
+  Results per page
+</ParamField>
+
+<ParamField query="sortBy" type="string">
+  Sort field (e.g., "shortName:asc")
+</ParamField>
+
+### Response
+
+Returns paginated player list.
+
+<RequestExample>
+```bash cURL
+curl https://api.cricpr.com/v1/teams/688a38f0fea3456a96402a30/players
+```
+</RequestExample>
+
+---
+
+## Add Player
+
+<api-endpoint method="POST" path="/v1/teams/{teamId}/players/add" authenticated />
+
+Add a player to the team roster.
+
+### Path Parameters
+
+<ParamField path="teamId" type="string" required>
+  Team ID
+</ParamField>
+
+### Request Body
+
+<ParamField body="playerId" type="string" required>
+  Player ID to add to team
+</ParamField>
+
+### Response
+
+Returns updated team object.
+
+<RequestExample>
+```bash cURL
+curl -X POST https://api.cricpr.com/v1/teams/688a38f0fea3456a96402a30/players/add \
+  -H "Authorization: Bearer YOUR_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"playerId": "688cb06818c2232abefa254e"}'
+```
+</RequestExample>
+
+---
+
+## Remove Player
+
+<api-endpoint method="POST" path="/v1/teams/{teamId}/players/remove" authenticated />
+
+Remove a player from the team roster.
+
+### Path Parameters
+
+<ParamField path="teamId" type="string" required>
+  Team ID
+</ParamField>
+
+### Request Body
+
+<ParamField body="playerId" type="string" required>
+  Player ID to remove from team
+</ParamField>
+
+### Response
+
+Returns updated team object.
+
+<RequestExample>
+```bash cURL
+curl -X POST https://api.cricpr.com/v1/teams/688a38f0fea3456a96402a30/players/remove \
+  -H "Authorization: Bearer YOUR_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"playerId": "688cb06818c2232abefa254e"}'
+```
+</RequestExample>
+
+---
+
+## Set Captain
+
+<api-endpoint method="POST" path="/v1/teams/{teamId}/captain" authenticated />
+
+Set or update the team captain.
+
+### Path Parameters
+
+<ParamField path="teamId" type="string" required>
+  Team ID
+</ParamField>
+
+### Request Body
+
+<ParamField body="playerId" type="string" required>
+  Player ID to set as captain (must be in team roster)
+</ParamField>
+
+### Response
+
+Returns updated team object.
+
+<RequestExample>
+```bash cURL
+curl -X POST https://api.cricpr.com/v1/teams/688a38f0fea3456a96402a30/captain \
+  -H "Authorization: Bearer YOUR_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"playerId": "688cb06818c2232abefa254e"}'
+```
+</RequestExample>
+
+---
+
+## Search Teams
+
+<api-endpoint method="GET" path="/v1/teams/search" />
+
+Search teams by query string.
+
+### Query Parameters
+
+<ParamField query="query" type="string" required>
+  Search query (searches team name)
+</ParamField>
+
+### Response
+
+Returns array of matching teams.
+
+<RequestExample>
+```bash cURL
+curl "https://api.cricpr.com/v1/teams/search?query=karachi"
+```
+</RequestExample>
+
+---
+
+## Check Name Availability
+
+<api-endpoint method="GET" path="/v1/teams/check-name" />
+
+Check if a team name is available and get suggestions if taken.
+
+### Query Parameters
+
+<ParamField query="name" type="string" required>
+  Team name to check (1-100 characters)
+</ParamField>
+
+### Response
+
+<ResponseField name="name" type="string">
+  The checked team name
+</ResponseField>
+
+<ResponseField name="isAvailable" type="boolean">
+  Whether the name is available
+</ResponseField>
+
+<ResponseField name="suggestions" type="array">
+  Array of alternative name suggestions (only if name is taken)
+</ResponseField>
+
+<RequestExample>
+```bash cURL
+curl "https://api.cricpr.com/v1/teams/check-name?name=Karachi%20Kings"
+```
+</RequestExample>
+
+<ResponseExample>
+```json Response
+{
+  "name": "Karachi Kings",
+  "isAvailable": false,
+  "suggestions": [
+    "Karachi Kings 1",
+    "Karachi Kings 2",
+    "Karachi Kings XI"
+  ]
+}
+```
+</ResponseExample>
+
+---
+
+## Get Team Stats
+
+<api-endpoint method="GET" path="/v1/teams/{teamId}/stats" />
+
+Get comprehensive team statistics including match record and player stats.
+
+### Path Parameters
+
+<ParamField path="teamId" type="string" required>
+  Team ID
+</ParamField>
+
+### Response
+
+<ResponseField name="team" type="object">
+  Team object
+</ResponseField>
+
+<ResponseField name="totalMatches" type="integer">
+  Total matches played
+</ResponseField>
+
+<ResponseField name="wins" type="integer">
+  Total wins
+</ResponseField>
+
+<ResponseField name="losses" type="integer">
+  Total losses
+</ResponseField>
+
+<ResponseField name="winRate" type="number">
+  Win percentage (0-100)
+</ResponseField>
+
+<ResponseField name="playerStats" type="array">
+  Array of player statistics objects
+</ResponseField>
+
+<RequestExample>
+```bash cURL
+curl https://api.cricpr.com/v1/teams/688a38f0fea3456a96402a30/stats
+```
+</RequestExample>
+
+<ResponseExample>
+```json Response
+{
+  "team": {
+    "id": "688a38f0fea3456a96402a30",
+    "name": "Karachi Kings"
+  },
+  "totalMatches": 25,
+  "wins": 15,
+  "losses": 10,
+  "winRate": 60.0,
+  "playerStats": [
+    {
+      "playerId": "688cb06818c2232abefa254e",
+      "matches": 20,
+      "runs": 450,
+      "wickets": 12
+    }
+  ]
+}
+```
+</ResponseExample>

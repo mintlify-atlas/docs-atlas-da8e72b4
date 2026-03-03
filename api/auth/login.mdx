@@ -1,0 +1,270 @@
+---
+title: 'Login'
+api: 'POST /v1/auth/login'
+description: 'Login with email or phone number and password'
+---
+
+## Endpoint
+
+```
+POST /v1/auth/login
+```
+
+## Request Body
+
+<ParamField body="email" type="string">
+  User's email address. Required if `phone` is not provided. Must be a valid email format.
+</ParamField>
+
+<ParamField body="phone" type="string">
+  User's phone number. Required if `email` is not provided. Example: `"92332206715"`
+</ParamField>
+
+<ParamField body="password" type="string" required>
+  User's password.
+</ParamField>
+
+<ParamField body="fcmToken" type="string">
+  Firebase Cloud Messaging token for push notifications. Optional. Can be empty string or null.
+</ParamField>
+
+<Note>
+  Either `email` or `phone` must be provided, but not both. The endpoint will validate that exactly one identifier is present.
+</Note>
+
+## Response
+
+<ResponseField name="user" type="object">
+  User object containing account information
+  
+  <Expandable title="user properties">
+    <ResponseField name="id" type="string">
+      Unique user identifier (MongoDB ObjectId)
+    </ResponseField>
+    
+    <ResponseField name="email" type="string">
+      User's email address
+    </ResponseField>
+    
+    <ResponseField name="name" type="string">
+      User's full name
+    </ResponseField>
+    
+    <ResponseField name="phone" type="string">
+      User's phone number (if registered with phone)
+    </ResponseField>
+    
+    <ResponseField name="role" type="string">
+      User role
+    </ResponseField>
+    
+    <ResponseField name="isEmailVerified" type="boolean">
+      Whether the user's email has been verified
+    </ResponseField>
+    
+    <ResponseField name="provider" type="string">
+      Authentication provider ("local" for email/phone and password)
+    </ResponseField>
+    
+    <ResponseField name="roles" type="array">
+      Array of role objects assigned to the user
+    </ResponseField>
+    
+    <ResponseField name="fcmToken" type="string">
+      Updated FCM token if provided in request
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+<ResponseField name="tokens" type="object">
+  Authentication tokens for the user
+  
+  <Expandable title="tokens properties">
+    <ResponseField name="access" type="object">
+      Access token information
+      
+      <Expandable title="access properties">
+        <ResponseField name="token" type="string">
+          JWT access token string. Valid for 30 minutes.
+        </ResponseField>
+        
+        <ResponseField name="expires" type="string">
+          ISO 8601 datetime when the access token expires
+        </ResponseField>
+      </Expandable>
+    </ResponseField>
+    
+    <ResponseField name="refresh" type="object">
+      Refresh token information
+      
+      <Expandable title="refresh properties">
+        <ResponseField name="token" type="string">
+          JWT refresh token string. Valid for 30 days.
+        </ResponseField>
+        
+        <ResponseField name="expires" type="string">
+          ISO 8601 datetime when the refresh token expires
+        </ResponseField>
+      </Expandable>
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+<ResponseField name="playerProfile" type="object">
+  Player profile associated with the user
+  
+  <Expandable title="playerProfile properties">
+    <ResponseField name="id" type="string">
+      Player profile ID
+    </ResponseField>
+    
+    <ResponseField name="userId" type="string">
+      Reference to the user ID
+    </ResponseField>
+    
+    <ResponseField name="shortName" type="string">
+      Short name for the player
+    </ResponseField>
+    
+    <ResponseField name="status" type="string">
+      Profile status: "active" if complete, "incomplete_profile" if missing required fields
+    </ResponseField>
+    
+    <ResponseField name="isGuest" type="boolean">
+      Whether this is a guest player profile
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+## Example Request (Email)
+
+```bash
+curl -X POST https://api.cricpr.com/v1/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{
+    "email": "john.doe@example.com",
+    "password": "SecurePass123",
+    "fcmToken": "eXaMpLeFcMtOkEn123"
+  }'
+```
+
+## Example Request (Phone)
+
+```bash
+curl -X POST https://api.cricpr.com/v1/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{
+    "phone": "92332206715",
+    "password": "SecurePass123"
+  }'
+```
+
+## Example Response
+
+<ResponseExample>
+```json 200 - OK
+{
+  "user": {
+    "id": "67a2596cd3defa11b079b943",
+    "email": "john.doe@example.com",
+    "name": "John Doe",
+    "role": "user",
+    "isEmailVerified": true,
+    "provider": "local",
+    "fcmToken": "eXaMpLeFcMtOkEn123",
+    "roles": [
+      {
+        "id": "67a2596cd3defa11b079b940",
+        "name": "user"
+      }
+    ]
+  },
+  "tokens": {
+    "access": {
+      "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI2N2EyNTk2Y2QzZGVmYTExYjA3OWI5NDMiLCJpYXQiOjE3Mzg4NDU2NTIsImV4cCI6MTczODg0NzQ1MiwidHlwZSI6ImFjY2VzcyJ9.xQ7Y8Z9wRvN3KpL2MnB4TfG6Hj5sD1A",
+      "expires": "2026-03-03T15:19:10.722Z"
+    },
+    "refresh": {
+      "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI2N2EyNTk2Y2QzZGVmYTExYjA3OWI5NDMiLCJpYXQiOjE3Mzg4NDU2NTIsImV4cCI6MTc0MTQzNzY1MiwidHlwZSI6InJlZnJlc2gifQ.pK8mN7vT2sJ9QzR4Lx6eH3oY1fW5",
+      "expires": "2026-04-02T14:49:10.722Z"
+    }
+  },
+  "playerProfile": {
+    "id": "67a2596cd3defa11b079b944",
+    "userId": "67a2596cd3defa11b079b943",
+    "shortName": "John Doe",
+    "status": "active",
+    "isGuest": false
+  }
+}
+```
+
+```json 400 - Missing Email or Phone
+{
+  "message": "Email or phone is required."
+}
+```
+
+```json 401 - Invalid Credentials
+{
+  "code": 401,
+  "message": "Incorrect email or password"
+}
+```
+
+```json 403 - Account Deactivated
+{
+  "code": 403,
+  "message": "Your account is deactivated. Please contact support."
+}
+```
+
+```json 404 - User Not Found
+{
+  "code": 404,
+  "message": "User not registered. Please sign up first."
+}
+```
+</ResponseExample>
+
+## Error Responses
+
+<ResponseField name="400" type="error">
+  **Bad Request** - Missing required fields or invalid parameters
+  
+  Common causes:
+  - Neither email nor phone provided
+  - Invalid email format
+  - Password not provided
+</ResponseField>
+
+<ResponseField name="401" type="error">
+  **Unauthorized** - Invalid credentials or wrong authentication method
+  
+  Common causes:
+  - Incorrect email/phone or password
+  - Account was created with social login (Google/Apple) - must use original provider
+</ResponseField>
+
+<ResponseField name="403" type="error">
+  **Forbidden** - Account access denied
+  
+  Common causes:
+  - Account has been deactivated
+  - Account has been deleted
+</ResponseField>
+
+<ResponseField name="404" type="error">
+  **Not Found** - User account doesn't exist
+  
+  User needs to register first before attempting to login.
+</ResponseField>
+
+## Notes
+
+- The endpoint accepts either email or phone for login, but not both simultaneously
+- If user registered via social login (Google/Apple), they must login using that provider instead
+- The system checks profile completeness on login and updates player profile status accordingly
+- FCM token is updated if provided in the login request
+- Access tokens expire after 30 minutes; use the refresh token to obtain new access tokens
+- Account status is validated before allowing login (deactivated and deleted accounts are rejected)

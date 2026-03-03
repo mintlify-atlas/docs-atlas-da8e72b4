@@ -1,0 +1,253 @@
+---
+title: 'Setup and Installation'
+description: 'Complete guide to setting up the Cric PR Backend API'
+---
+
+## Prerequisites
+
+Before you begin, ensure you have the following installed:
+
+- Node.js >= 12.0.0
+- MongoDB (local or Atlas cluster)
+- Redis server (optional, for caching)
+- npm or yarn package manager
+
+## Installation
+
+<Steps>
+  <Step title="Clone the repository">
+    Clone the Cric PR Backend repository to your local machine:
+    
+    ```bash
+    git clone <repository-url>
+    cd cric-pr-backend
+    ```
+  </Step>
+
+  <Step title="Install dependencies">
+    Install all required npm packages:
+    
+    ```bash
+    npm install
+    ```
+    
+    This will install all dependencies including:
+    - Express.js for REST API
+    - Mongoose for MongoDB ODM
+    - Socket.io for WebSocket support
+    - ioredis for Redis caching
+    - JWT for authentication
+    - And many more...
+  </Step>
+
+  <Step title="Configure environment variables">
+    Create a `.env` file in the root directory by copying the example file:
+    
+    ```bash
+    cp .env.example .env
+    ```
+    
+    Update the `.env` file with your configuration. See [Environment Variables](/guides/environment-variables) for detailed information.
+  </Step>
+
+  <Step title="Set up MongoDB">
+    Configure your MongoDB connection string in the `.env` file. You can use:
+    - MongoDB Atlas (cloud)
+    - Local MongoDB instance
+    
+    See [Database Setup](/guides/database-setup) for detailed MongoDB configuration.
+  </Step>
+
+  <Step title="Set up Redis (Optional)">
+    If you want to use caching, configure Redis in your `.env` file:
+    
+    ```env
+    REDIS_HOST=localhost
+    REDIS_PORT=6379
+    REDIS_PASSWORD=
+    REDIS_DB=0
+    REDIS_TTL=3600
+    ```
+    
+    See [Redis Caching](/guides/redis-caching) for more details.
+  </Step>
+</Steps>
+
+## Running the Application
+
+### Development Mode
+
+Run the application in development mode with auto-reload:
+
+```bash
+npm run dev
+```
+
+This uses nodemon to automatically restart the server when files change.
+
+### Production Mode
+
+Start the application using PM2 process manager:
+
+```bash
+# Start with default configuration
+npm start
+
+# Start in production environment
+npm run start:prod
+
+# Start in development environment
+npm run start:dev
+
+# Start in staging environment
+npm run start:staging
+```
+
+### Cluster Mode
+
+Run the application in cluster mode for better performance:
+
+```bash
+npm run dev:cluster
+```
+
+## PM2 Management Commands
+
+The application uses PM2 for process management:
+
+```bash
+# Stop the application
+npm run stop
+
+# Restart the application
+npm run restart
+
+# Reload the application (zero-downtime)
+npm run reload
+
+# Delete PM2 process
+npm run delete
+
+# View logs
+npm run logs
+
+# Monitor processes
+npm run monit
+```
+
+## Server Configuration
+
+The application can run two servers:
+
+1. **API Server** (REST API) - Runs on port specified in `PORT` env variable (default: 3000)
+2. **WebSocket Server** - Runs on port specified in `SOCKET_PORT` env variable (default: 5002)
+
+You can enable/disable servers using:
+
+```env
+API_SERVER_ENABLE=true
+WS_SERVER_ENABLE=false
+```
+
+## Verification
+
+Once the server is running, verify the installation:
+
+<Steps>
+  <Step title="Check API health">
+    Access the API at `http://localhost:3006` (or your configured PORT)
+  </Step>
+
+  <Step title="Check WebSocket connection">
+    If WebSocket server is enabled, it will be available on port 3001 (or your configured SOCKET_PORT)
+  </Step>
+
+  <Step title="View API documentation">
+    Access Swagger documentation at `http://localhost:3006/api-docs`
+  </Step>
+</Steps>
+
+## Seeding Data
+
+Populate the database with initial data:
+
+```bash
+# Run all seeders
+npm run seed:all
+
+# Run specific seeder
+npm run seed
+```
+
+## Utility Scripts
+
+Additional utility scripts available:
+
+```bash
+# Update statistics
+npm run update-stats
+
+# Create users and teams
+npm run create-users-teams
+
+# Cleanup users and teams
+npm run cleanup-users-teams
+```
+
+## Docker Support
+
+Run the application using Docker:
+
+```bash
+# Production environment
+npm run docker:prod
+
+# Development environment
+npm run docker:dev
+
+# Update development containers
+npm run docker:dev-update
+
+# Test environment
+npm run docker:test
+```
+
+## Troubleshooting
+
+### Port Already in Use
+
+If you get a "port already in use" error, either:
+- Stop the process using the port
+- Change the `PORT` or `SOCKET_PORT` in your `.env` file
+
+### MongoDB Connection Failed
+
+Ensure:
+- MongoDB is running
+- Connection string is correct
+- Network access is configured (for Atlas)
+- Database user has proper permissions
+
+### Redis Connection Issues
+
+The application will continue to work without Redis, but caching will be disabled. Check:
+- Redis server is running
+- Connection credentials are correct
+- Redis port is accessible
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Environment Variables" icon="gear" href="/guides/environment-variables">
+    Configure all environment variables
+  </Card>
+  <Card title="Database Setup" icon="database" href="/guides/database-setup">
+    Set up and configure MongoDB
+  </Card>
+  <Card title="Redis Caching" icon="bolt" href="/guides/redis-caching">
+    Implement Redis caching
+  </Card>
+  <Card title="WebSocket Integration" icon="plug" href="/guides/websocket-integration">
+    Integrate WebSocket clients
+  </Card>
+</CardGroup>
